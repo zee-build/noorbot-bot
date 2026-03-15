@@ -96,6 +96,10 @@ class AdminLoginBody(BaseModel):
     password: str
 
 
+class AdminToggleBody(BaseModel):
+    active: bool = True
+
+
 # ── endpoints ────────────────────────────────────────────────────────────────
 
 @app.get("/health")
@@ -607,10 +611,10 @@ async def admin_top10(_: bool = Depends(verify_admin)):
 @app.patch("/api/admin/user/{user_id}/active")
 async def admin_toggle_user(
     user_id: int,
-    body: dict,
+    body: AdminToggleBody,
     _: bool = Depends(verify_admin),
 ):
-    active = 1 if body.get("active", True) else 0
+    active = 1 if body.active else 0
     await database.execute(
         "UPDATE users SET active=$1 WHERE user_id=$2", active, user_id
     )
