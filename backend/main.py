@@ -25,16 +25,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="NoorBot API", lifespan=lifespan)
 
-FRONTEND_URL = os.getenv("FRONTEND_URL", "")
-
-origins = ["*"]
-if FRONTEND_URL:
-    origins = [FRONTEND_URL, "http://localhost:5173", "http://localhost:3000", "*"]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
