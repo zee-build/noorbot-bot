@@ -152,6 +152,7 @@ export default function Admin() {
   const [users, setUsers] = useState([]);
   const [top10, setTop10] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleLogin = (tok) => {
     setToken(tok);
@@ -166,6 +167,7 @@ export default function Admin() {
   const loadStats = useCallback(async () => {
     if (!token) return;
     setLoading(true);
+    setError('');
     try {
       const [s, u, t] = await Promise.all([
         adminApi.getStats(token),
@@ -175,8 +177,8 @@ export default function Admin() {
       setStats(s);
       setUsers(u);
       setTop10(t);
-    } catch {
-      handleLogout();
+    } catch (e) {
+      setError(`Failed to load data: ${e.message}. Check VITE_API_URL on Vercel.`);
     } finally {
       setLoading(false);
     }
@@ -247,6 +249,13 @@ export default function Admin() {
       {loading && (
         <div className="text-center py-8">
           <p className="text-muted font-body text-sm">Loading...</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="mx-4 mt-3 rounded-xl p-4" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
+          <p className="text-xs font-body text-red-400">{error}</p>
+          <button onClick={loadStats} className="mt-2 text-xs font-body text-gold underline">Retry</button>
         </div>
       )}
 
