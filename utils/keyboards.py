@@ -115,7 +115,7 @@ def add_goal_kb(existing_keys: set = None) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(rows)
 
 
-def main_menu_kb(has_webapp: bool = False) -> InlineKeyboardMarkup:
+def main_menu_kb(has_webapp: bool = True) -> InlineKeyboardMarkup:
     rows = [
         [
             InlineKeyboardButton("🕌 Prayers",    callback_data="view:prayers"),
