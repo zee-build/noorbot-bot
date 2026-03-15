@@ -154,6 +154,87 @@ async def send_sleep_adhkar_reminder(bot: Bot):
             logger.error(f"Sleep adhkar error {user['user_id']}: {e}")
 
 
+async def send_ramadan_suhoor(bot: Bot):
+    """Suhoor reminder — sent before Fajr (around 3:30 AM UAE)."""
+    from utils.prayer_times import is_ramadan
+    users = await get_all_active_users()
+    for user in users:
+        if not user.get("reminders_on", 1):
+            continue
+        try:
+            ramadan = await is_ramadan(user.get("latitude", 25.2048), user.get("longitude", 55.2708))
+            if not ramadan:
+                continue
+            times = await get_prayer_times(user["latitude"], user["longitude"])
+            fajr_time = times.get("fajr", "05:00") if times else "05:00"
+            await bot.send_message(
+                chat_id=user["user_id"],
+                text=(
+                    f"🌙 *Suhoor Time!*\n\n"
+                    f"Fajr is at *{fajr_time}* — eat & drink before then.\n\n"
+                    "_The Prophet ﷺ said: 'Have suhoor, for in suhoor there is blessing.'_ — Bukhari\n\n"
+                    "May Allah accept your fast! 🤲"
+                ),
+                parse_mode=ParseMode.MARKDOWN
+            )
+        except Exception as e:
+            logger.error(f"Suhoor reminder error {user['user_id']}: {e}")
+
+
+async def send_ramadan_iftar(bot: Bot):
+    """Iftar reminder — sent before Maghrib (around Maghrib time)."""
+    from utils.prayer_times import is_ramadan
+    users = await get_all_active_users()
+    for user in users:
+        if not user.get("reminders_on", 1):
+            continue
+        try:
+            ramadan = await is_ramadan(user.get("latitude", 25.2048), user.get("longitude", 55.2708))
+            if not ramadan:
+                continue
+            times = await get_prayer_times(user["latitude"], user["longitude"])
+            maghrib_time = times.get("maghrib", "18:30") if times else "18:30"
+            await bot.send_message(
+                chat_id=user["user_id"],
+                text=(
+                    f"🌅 *Iftar soon — Maghrib at {maghrib_time}!*\n\n"
+                    "Prepare your iftar. Don't forget the dua:\n\n"
+                    "_اللَّهُمَّ لَكَ صُمْتُ وَعَلَى رِزْقِكَ أَفْطَرْتُ_\n"
+                    "_O Allah! For You I fasted and upon Your provision I break my fast._\n\n"
+                    "May Allah accept your fast! 🤲"
+                ),
+                parse_mode=ParseMode.MARKDOWN
+            )
+        except Exception as e:
+            logger.error(f"Iftar reminder error {user['user_id']}: {e}")
+
+
+async def send_ramadan_tarawih(bot: Bot):
+    """Tarawih reminder — after Isha (around 9 PM UAE)."""
+    from utils.prayer_times import is_ramadan
+    from utils.keyboards import deed_kb
+    users = await get_all_active_users()
+    for user in users:
+        if not user.get("reminders_on", 1):
+            continue
+        try:
+            ramadan = await is_ramadan(user.get("latitude", 25.2048), user.get("longitude", 55.2708))
+            if not ramadan:
+                continue
+            await bot.send_message(
+                chat_id=user["user_id"],
+                text=(
+                    "🌙 *Time for Tarawih!*\n\n"
+                    "The Prophet ﷺ said: 'Whoever prays Tarawih with full faith and "
+                    "hoping for Allah's reward, his past sins will be forgiven.' — Bukhari\n\n"
+                    "Head to the masjid or pray at home. May Allah accept! 🤲"
+                ),
+                parse_mode=ParseMode.MARKDOWN
+            )
+        except Exception as e:
+            logger.error(f"Tarawih reminder error {user['user_id']}: {e}")
+
+
 async def send_weekly_challenge(bot: Bot):
     """Sends a weekly challenge every Monday morning."""
     import random

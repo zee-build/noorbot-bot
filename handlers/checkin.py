@@ -386,6 +386,49 @@ async def _handle_callback_inner(query, data, user_id, chat_id, context):
             await query.edit_message_text("⏭ Challenge skipped. There's always next week! 🤲", parse_mode=ParseMode.MARKDOWN)
 
 
+async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handles a shared location message — auto-detects city & updates prayer times."""
+    user_id = update.effective_user.id
+    location = update.message.location
+    lat = location.latitude
+    lng = location.longitude
+
+    await update.message.reply_text(
+        "📍 *Detecting your location...*", parse_mode=ParseMode.MARKDOWN
+    )
+
+    import aiohttp
+    try:
+        headers = {"User-Agent": "NoorBot/2.0"}
+        url = f"https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lng}&format=json"
+        async with aiohttp.ClientSession() as s:
+            async with s.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=8)) as r:
+                data = await r.json()
+        address = data.get("address", {})
+        city = (
+            address.get("city") or address.get("town") or
+            address.get("village") or address.get("county") or "Unknown"
+        )
+        country = address.get("country", "")
+    except Exception as e:
+        logger.error(f"Reverse geocode failed: {e}")
+        city, country = "Unknown", ""
+
+    await update_user_location(user_id, city, country, lat, lng)
+
+    from utils.prayer_times import get_prayer_times, format_prayer_schedule
+    times = await get_prayer_times(lat, lng)
+    schedule = format_prayer_schedule(times, city) if times else ""
+
+    PENDING.pop(user_id, None)
+    await update.message.reply_text(
+        f"✅ *Location set to {city}!*\n\n{schedule}\n\n"
+        "_Prayer reminders will now use your exact location._",
+        parse_mode=ParseMode.MARKDOWN,
+        reply_markup=main_menu_kb()
+    )
+
+
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handles free-text messages — city input, group name, group code."""
     user_id = update.effective_user.id

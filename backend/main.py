@@ -2,7 +2,7 @@ import os
 from contextlib import asynccontextmanager
 from datetime import date, timedelta, datetime
 
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -90,6 +90,10 @@ class LogBody(BaseModel):
 
 class UpdateUserBody(BaseModel):
     reminders_on: bool
+
+
+class AdminLoginBody(BaseModel):
+    password: str
 
 
 # ── endpoints ────────────────────────────────────────────────────────────────
@@ -505,5 +509,109 @@ async def update_user(
         "UPDATE users SET reminders_on=$1 WHERE user_id=$2",
         body.reminders_on,
         user_id,
+    )
+    return {"success": True}
+
+
+# ── Admin endpoints ───────────────────────────────────────────────────────────
+
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
+
+
+def verify_admin(authorization: str = Header(...)):
+    """Simple password auth for admin panel — separate from Telegram initData."""
+    if not ADMIN_PASSWORD or authorization != f"Admin {ADMIN_PASSWORD}":
+        raise HTTPException(status_code=401, detail="Admin access denied")
+    return True
+
+
+@app.post("/api/admin/login")
+async def admin_login(body: AdminLoginBody):
+    if not ADMIN_PASSWORD or body.password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=401, detail="Invalid password")
+    return {"success": True, "token": f"Admin {ADMIN_PASSWORD}"}
+
+
+@app.get("/api/admin/stats")
+async def admin_stats(_: bool = Depends(verify_admin)):
+    today = date.today()
+    week_start = today - timedelta(days=7)
+    total_users = await database.fetchval("SELECT COUNT(*) FROM users") or 0
+    active_today = await database.fetchval(
+        "SELECT COUNT(DISTINCT user_id) FROM deed_logs WHERE log_date=$1", today
+    ) or 0
+    active_week = await database.fetchval(
+        "SELECT COUNT(DISTINCT user_id) FROM deed_logs WHERE log_date>=$1", week_start
+    ) or 0
+    total_logs = await database.fetchval("SELECT COUNT(*) FROM deed_logs") or 0
+    new_today = await database.fetchval(
+        "SELECT COUNT(*) FROM users WHERE joined_at=$1", str(today)
+    ) or 0
+    return {
+        "total_users": total_users,
+        "new_today": new_today,
+        "active_today": active_today,
+        "active_week": active_week,
+        "total_logs": total_logs,
+    }
+
+
+@app.get("/api/admin/users")
+async def admin_users(
+    limit: int = 50,
+    offset: int = 0,
+    _: bool = Depends(verify_admin),
+):
+    today = date.today()
+    week_start = today - timedelta(days=7)
+    rows = await database.fetch(
+        """
+        SELECT u.user_id, u.first_name, u.username, u.city, u.active,
+               u.total_xp, u.level, u.joined_at,
+               COALESCE((SELECT COUNT(*) FROM deed_logs dl WHERE dl.user_id=u.user_id AND dl.log_date=$1),0) as logs_today,
+               COALESCE((SELECT SUM(dl2.points) FROM deed_logs dl2 WHERE dl2.user_id=u.user_id AND dl2.log_date>=$2),0) as pts_week
+        FROM users u
+        ORDER BY u.joined_at DESC
+        LIMIT $3 OFFSET $4
+        """,
+        str(today), week_start, limit, offset
+    )
+    return [dict(r) for r in rows]
+
+
+@app.get("/api/admin/top10")
+async def admin_top10(_: bool = Depends(verify_admin)):
+    rows = await database.fetch(
+        """
+        SELECT u.user_id, u.first_name, u.username, u.level,
+               COALESCE(SUM(dl.points),0) as total_pts
+        FROM users u
+        LEFT JOIN deed_logs dl ON dl.user_id=u.user_id
+        GROUP BY u.user_id, u.first_name, u.username, u.level
+        ORDER BY total_pts DESC LIMIT 10
+        """
+    )
+    result = []
+    for i, r in enumerate(rows):
+        result.append({
+            "rank": i + 1,
+            "user_id": r["user_id"],
+            "first_name": r["first_name"],
+            "username": r.get("username", ""),
+            "level": r.get("level", 0) or 0,
+            "total_pts": int(r.get("total_pts", 0) or 0),
+        })
+    return result
+
+
+@app.patch("/api/admin/user/{user_id}/active")
+async def admin_toggle_user(
+    user_id: int,
+    body: dict,
+    _: bool = Depends(verify_admin),
+):
+    active = 1 if body.get("active", True) else 0
+    await database.execute(
+        "UPDATE users SET active=$1 WHERE user_id=$2", active, user_id
     )
     return {"success": True}

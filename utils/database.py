@@ -413,6 +413,30 @@ async def reset_progress(user_id: int):
         await conn.execute("UPDATE users SET total_xp=0, level=1 WHERE user_id=$1", user_id)
 
 
+async def get_total_users() -> int:
+    return await pool.fetchval("SELECT COUNT(*) FROM users") or 0
+
+
+async def get_all_users_admin() -> list:
+    rows = await pool.fetch(
+        "SELECT user_id, username, first_name, city, active, total_xp, level, joined_at FROM users ORDER BY joined_at DESC"
+    )
+    return [dict(r) for r in rows]
+
+
+async def set_user_active(user_id: int, active: bool):
+    await pool.execute(
+        "UPDATE users SET active=$1 WHERE user_id=$2",
+        1 if active else 0, user_id
+    )
+
+
+async def is_new_user(user_id: int) -> bool:
+    """Returns True if user does not yet exist in DB."""
+    row = await pool.fetchrow("SELECT user_id FROM users WHERE user_id=$1", user_id)
+    return row is None
+
+
 async def get_group_leaderboard(group_id: int, period_start: str) -> list:
     rows = await pool.fetch("""
         SELECT u.user_id, u.first_name, u.username, u.level,

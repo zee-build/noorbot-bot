@@ -96,9 +96,15 @@ async def build_home_page(user_id: int) -> str:
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
+    from utils.database import is_new_user
+    newly_joined = await is_new_user(user.id)
     await upsert_user(user.id, user.username or "", user.first_name)
     db_user = await get_user(user.id)
     is_new  = not db_user or not db_user.get("onboarding")
+
+    if newly_joined:
+        from handlers.admin import notify_admin_new_user
+        await notify_admin_new_user(context.bot, user.id, user.first_name, user.username or "")
 
     await add_default_goals(user.id)
 
@@ -223,8 +229,10 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/goals — Manage your goals\n"
         "/settings — City, reminders, groups\n"
         "/leaderboard — Top users this week\n"
+        "/card — Share your progress card 🌙\n"
         "/help — This message\n\n"
-        "Prayer reminders fire 15 min before each salah. ☽"
+        "Prayer reminders fire 15 min before each salah. ☽\n"
+        "_Share your location to auto-detect city & prayer times._"
     )
     await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
 

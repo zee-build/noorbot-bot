@@ -10,7 +10,9 @@ DATABASE_URL     = os.getenv("DATABASE_URL", "noorbot.db")
 TIMEZONE         = "Asia/Dubai"
 PRAYER_METHOD    = 8
 REMINDER_MINUTES = 15
-WEBAPP_URL       = os.getenv("WEBAPP_URL", "")  # your mini app URL when ready
+WEBAPP_URL       = os.getenv("WEBAPP_URL", "")
+ADMIN_CHAT_ID    = int(os.getenv("ADMIN_CHAT_ID", "0"))
+ADMIN_PASSWORD   = os.getenv("ADMIN_PASSWORD", "")
 
 # ── Scoring ───────────────────────────────────────────────
 POINTS = {

@@ -9,6 +9,7 @@ import Adhkar from './pages/Adhkar';
 import Leaderboard from './pages/Leaderboard';
 import Stats from './pages/Stats';
 import Settings from './pages/Settings';
+import Admin from './pages/Admin';
 
 // Islamic geometric SVG pattern (16-pointed star base)
 const GeometricBg = () => (
@@ -97,6 +98,12 @@ export default function App() {
   }, []);
 
   if (loading) return <LoadingScreen />;
+
+  // Admin panel — accessible at ?admin=1 or hash #admin
+  const isAdminRoute =
+    window.location.search.includes('admin') ||
+    window.location.hash === '#admin';
+  if (isAdminRoute) return <Admin />;
 
   const sharedProps = { userId, user };
 
