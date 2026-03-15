@@ -93,6 +93,11 @@ async def post_init(application: Application):
         lambda: _run(ramadan_tarawih, application),
         CronTrigger(hour=21, minute=0, timezone=tz), id="ramadan_tarawih"
     )
+    # Period mode expiration check — 12:01 AM daily
+    scheduler.add_job(
+        lambda: _run(check_period_expirations, application),
+        CronTrigger(hour=0, minute=1, timezone=tz), id="period_check"
+    )
 
     scheduler.start()
     logger.info("✅ Scheduler started")
@@ -150,6 +155,26 @@ async def ramadan_iftar(app):
 async def ramadan_tarawih(app):
     from handlers.reminders import send_ramadan_tarawih
     await send_ramadan_tarawih(app.bot)
+
+async def check_period_expirations(app):
+    from utils.database import get_users_period_ending_today, deactivate_period_mode
+    from telegram.constants import ParseMode
+    users = await get_users_period_ending_today()
+    for user in users:
+        await deactivate_period_mode(user["user_id"])
+        try:
+            await app.bot.send_message(
+                chat_id=user["user_id"],
+                text=(
+                    "🌸 *Welcome back!*\n\n"
+                    "Your tracking pause has ended. Your streaks are protected — "
+                    "Alhamdulillah! 💚\n\n"
+                    "May Allah make it easy for you. 🤲"
+                ),
+                parse_mode=ParseMode.MARKDOWN
+            )
+        except Exception as e:
+            logger.error(f"Period expiry notify {user['user_id']}: {e}")
 
 
 def main():

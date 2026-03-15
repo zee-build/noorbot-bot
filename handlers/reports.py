@@ -6,7 +6,7 @@ from datetime import date, timedelta
 from telegram import Bot
 from telegram.constants import ParseMode
 
-from utils.database import get_all_active_users, get_user_goals, get_logs_for_date, get_week_logs, get_month_scores, get_user
+from utils.database import get_all_active_users, get_user_goals, get_logs_for_date, get_week_logs, get_month_scores, get_user, is_period_mode
 from utils.prayer_times import is_ramadan
 from config import PERFORMANCE_TIERS, xp_progress
 
@@ -34,13 +34,8 @@ async def build_daily_report(user_id: int, for_date: str = None) -> str:
     logs  = await get_logs_for_date(user_id, for_date)
     logged_keys = {l["deed_key"] for l in logs}
 
-    # Separate prayers from sunnah/voluntary — no overlap
     prayers = [g for g in goals if g["deed_key"] in FARDH_KEYS]
     sunnah  = [g for g in goals if g["deed_key"] not in FARDH_KEYS]
-
-    earned  = sum(l["points"] for l in logs)
-    max_pts = sum(g["points"] for g in goals)
-    pct     = round(earned / max_pts * 100) if max_pts else 0
 
     db_user = await get_user(user_id)
     level, xp_in, xp_needed = xp_progress(db_user["total_xp"]) if db_user else (1, 0, 200)
@@ -49,6 +44,7 @@ async def build_daily_report(user_id: int, for_date: str = None) -> str:
         db_user["latitude"] if db_user else 25.2048,
         db_user["longitude"] if db_user else 55.2708
     )
+    in_period = await is_period_mode(user_id)
 
     lines = [f"📋 *Daily Report — {for_date}*"]
     if ramadan:
@@ -57,10 +53,13 @@ async def build_daily_report(user_id: int, for_date: str = None) -> str:
 
     lines.append("*🕌 Fardh Prayers:*")
     for g in prayers:
-        log    = next((l for l in logs if l["deed_key"] == g["deed_key"]), None)
-        done   = g["deed_key"] in logged_keys
-        jm_txt = " _(jama'ah)_" if log and log.get("jamaah") else ""
-        lines.append(f"{'✅' if done else '❌'} {g['deed_label']}{jm_txt}")
+        if in_period:
+            lines.append(f"🌙 {g['deed_label']} — _resting_")
+        else:
+            log    = next((l for l in logs if l["deed_key"] == g["deed_key"]), None)
+            done   = g["deed_key"] in logged_keys
+            jm_txt = " _(jama'ah)_" if log and log.get("jamaah") else ""
+            lines.append(f"{'✅' if done else '❌'} {g['deed_label']}{jm_txt}")
 
     if sunnah:
         lines.append("\n*📿 Sunnah & Voluntary:*")
@@ -68,9 +67,23 @@ async def build_daily_report(user_id: int, for_date: str = None) -> str:
             done = g["deed_key"] in logged_keys
             lines.append(f"{'✅' if done else '❌'} {g['deed_label']}")
 
+    # Score excludes prayers during period mode
+    if in_period:
+        prayer_pts = sum(g["points"] for g in prayers)
+        earned  = sum(l["points"] for l in logs)
+        max_pts = sum(g["points"] for g in goals) - prayer_pts
+    else:
+        earned  = sum(l["points"] for l in logs)
+        max_pts = sum(g["points"] for g in goals)
+    pct = round(earned / max_pts * 100) if max_pts else 0
+
     lines.append(f"\n*Score: {earned}/{max_pts} pts ({pct}%)*")
     lines.append(f"`{_bar(pct)}` {_tier(pct)}")
     lines.append(f"\n⭐ Level {level} · {xp_in}/{xp_needed} XP")
+
+    if in_period:
+        lines.append("\n🌙 _Tracking paused — streaks protected. Keep up your adhkar!_ 💚")
+
     return "\n".join(lines)
 
 

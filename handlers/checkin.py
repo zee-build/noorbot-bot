@@ -11,7 +11,8 @@ from utils.database import (
     log_deed, get_user_goals, get_today_logs, add_goal,
     add_xp, get_user, update_user_location, update_user_reminders,
     create_group, join_group, get_user_groups, get_group_leaderboard,
-    get_all_active_users, reset_progress
+    get_all_active_users, reset_progress,
+    set_period_mode, deactivate_period_mode, is_period_mode
 )
 from utils.prayer_times import get_prayer_times, format_prayer_schedule, is_ramadan
 from utils.keyboards import (
@@ -335,6 +336,27 @@ async def _handle_callback_inner(query, data, user_id, chat_id, context):
                 parse_mode=ParseMode.MARKDOWN,
                 reply_markup=reset_confirm_kb()
             )
+        elif action == "periodmode":
+            in_period = await is_period_mode(user_id)
+            if in_period:
+                await deactivate_period_mode(user_id)
+                await query.edit_message_text(
+                    "✅ *Tracking resumed.*\n\nWelcome back! Prayer reminders are active again.\n\n"
+                    "May Allah accept your worship and grant you ease. 🤲",
+                    parse_mode=ParseMode.MARKDOWN,
+                    reply_markup=main_menu_kb()
+                )
+            else:
+                PENDING[user_id] = "awaiting_period_days"
+                await query.edit_message_text(
+                    "🌙 *Pause Tracking*\n\n"
+                    "Prayer and Quran reminders will be paused and your streaks will be protected.\n\n"
+                    "You can still earn points for adhkar, dhikr, sadaqah, and other deeds.\n\n"
+                    "How many days would you like to pause for?\n"
+                    "_Type a number between 1 and 10_",
+                    parse_mode=ParseMode.MARKDOWN
+                )
+
         elif action == "reset_confirm":
             await reset_progress(user_id)
             await query.edit_message_text(
@@ -465,6 +487,30 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"👥 *Group '{group['name']}' created!*\n\n"
             f"🔗 Invite code: `{group['invite_code']}`\n\n"
             "Share this code with friends — they can join with /settings → Join a group.",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=main_menu_kb()
+        )
+
+    elif pending == "awaiting_period_days":
+        try:
+            days = int(text.strip())
+            if not 1 <= days <= 10:
+                raise ValueError
+        except ValueError:
+            await update.message.reply_text(
+                "Please enter a number between 1 and 10.",
+                reply_markup=settings_kb()
+            )
+            return
+        await set_period_mode(user_id, days)
+        PENDING.pop(user_id, None)
+        until = (date.today() + timedelta(days=days)).strftime("%A, %d %B")
+        await update.message.reply_text(
+            f"🌙 *Tracking paused.*\n\n"
+            f"Prayer and Quran reminders are paused until *{until}*.\n\n"
+            f"Your streaks are protected during this time. "
+            f"You can still earn points for adhkar and other deeds.\n\n"
+            f"May Allah grant you ease and accept your worship. 🤲",
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=main_menu_kb()
         )

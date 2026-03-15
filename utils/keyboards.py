@@ -151,6 +151,7 @@ def settings_kb() -> InlineKeyboardMarkup:
         [InlineKeyboardButton("👥 Create a group",     callback_data="settings:creategroup")],
         [InlineKeyboardButton("🔗 Join a group",       callback_data="settings:joingroup")],
         [InlineKeyboardButton("🔄 Reset progress",     callback_data="settings:reset")],
+        [InlineKeyboardButton("🌙 Pause Tracking",     callback_data="settings:periodmode")],
         [InlineKeyboardButton("🧪 Test Alerts (temp)", callback_data="settings:test_alerts")],
         [InlineKeyboardButton("🏠 Home",          callback_data="view:home")],
     ])

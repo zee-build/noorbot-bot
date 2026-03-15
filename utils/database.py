@@ -135,14 +135,26 @@ async def init_db():
             )
         """)
 
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS period_logs (
+                id        SERIAL PRIMARY KEY,
+                user_id   BIGINT,
+                log_date  DATE,
+                UNIQUE(user_id, log_date),
+                FOREIGN KEY (user_id) REFERENCES users(user_id)
+            )
+        """)
+
         # ── Migrate older DBs missing v2 columns ──────────────
         migrations = [
-            ("users",     "total_xp",     "INTEGER DEFAULT 0"),
-            ("users",     "level",        "INTEGER DEFAULT 1"),
-            ("users",     "reminders_on", "INTEGER DEFAULT 1"),
-            ("users",     "onboarding",   "INTEGER DEFAULT 0"),
-            ("deed_logs", "xp_earned",    "INTEGER DEFAULT 0"),
-            ("deed_logs", "jamaah",       "INTEGER DEFAULT 0"),
+            ("users",     "total_xp",           "INTEGER DEFAULT 0"),
+            ("users",     "level",               "INTEGER DEFAULT 1"),
+            ("users",     "reminders_on",        "INTEGER DEFAULT 1"),
+            ("users",     "onboarding",          "INTEGER DEFAULT 0"),
+            ("users",     "period_mode",         "BOOLEAN DEFAULT FALSE"),
+            ("users",     "period_mode_until",   "DATE DEFAULT NULL"),
+            ("deed_logs", "xp_earned",           "INTEGER DEFAULT 0"),
+            ("deed_logs", "jamaah",              "INTEGER DEFAULT 0"),
         ]
         for table, col, definition in migrations:
             try:
@@ -322,17 +334,76 @@ async def get_month_scores(user_id, year, month):
 
 
 async def get_streak(user_id, deed_key):
+    prayer_keys = {"fajr", "dhuhr", "asr", "maghrib", "isha", "quran"}
     rows = await pool.fetch(
         "SELECT log_date FROM deed_logs WHERE user_id=$1 AND deed_key=$2 ORDER BY log_date DESC",
         user_id, deed_key
     )
-    dates  = {r["log_date"] for r in rows}
+    logged_dates = {r["log_date"] for r in rows}
+
+    # Dates covered by period mode (for prayer/quran streak protection)
+    if deed_key in prayer_keys:
+        p_rows = await pool.fetch(
+            "SELECT log_date FROM period_logs WHERE user_id=$1", user_id
+        )
+        period_dates = {r["log_date"] for r in p_rows}
+    else:
+        period_dates = set()
+
     streak = 0
     check  = date.today()
-    while check.isoformat() in dates:
-        streak += 1
-        check  -= timedelta(days=1)
+    while True:
+        if check in logged_dates or check in period_dates:
+            streak += 1
+            check -= timedelta(days=1)
+        else:
+            break
     return streak
+
+
+# ── Period Mode ─────────────────────────────────────────────
+
+async def set_period_mode(user_id: int, days: int):
+    until = date.today() + timedelta(days=days)
+    async with pool.acquire() as conn:
+        await conn.execute(
+            "UPDATE users SET period_mode=TRUE, period_mode_until=$1 WHERE user_id=$2",
+            until, user_id
+        )
+        for i in range(days):
+            d = date.today() + timedelta(days=i)
+            await conn.execute(
+                "INSERT INTO period_logs (user_id, log_date) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+                user_id, d
+            )
+
+
+async def deactivate_period_mode(user_id: int):
+    await pool.execute(
+        "UPDATE users SET period_mode=FALSE, period_mode_until=NULL WHERE user_id=$1",
+        user_id
+    )
+
+
+async def is_period_mode(user_id: int) -> bool:
+    row = await pool.fetchrow(
+        "SELECT period_mode, period_mode_until FROM users WHERE user_id=$1", user_id
+    )
+    if not row or not row["period_mode"]:
+        return False
+    until = row["period_mode_until"]
+    if until and until < date.today():
+        await deactivate_period_mode(user_id)
+        return False
+    return True
+
+
+async def get_users_period_ending_today() -> list:
+    rows = await pool.fetch(
+        "SELECT * FROM users WHERE period_mode=TRUE AND period_mode_until=$1",
+        date.today()
+    )
+    return [dict(r) for r in rows]
 
 
 async def check_all5_today(user_id, log_date=None):

@@ -9,7 +9,7 @@ from telegram.constants import ParseMode
 
 from utils.database import (
     get_all_active_users, mark_reminder_sent, mark_missed_followup_sent,
-    get_today_logs, get_user_goals
+    get_today_logs, get_user_goals, is_period_mode
 )
 from utils.prayer_times import (
     get_prayer_times, minutes_until_prayer, minutes_since_prayer,
@@ -39,6 +39,10 @@ async def check_and_send_reminders(bot: Bot):
         if not user.get("reminders_on", 1):
             continue
         try:
+            # Skip all prayer reminders during period mode
+            if await is_period_mode(user["user_id"]):
+                continue
+
             times = await get_prayer_times(user["latitude"], user["longitude"])
             if not times:
                 continue
