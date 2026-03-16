@@ -165,6 +165,8 @@ async def send_all_daily_reports(bot: Bot):
     if not await mark_broadcast_sent("daily_reports", today):
         return
     for user in await get_all_active_users():
+        if not user.get("reminders_on", 1):
+            continue
         try:
             text = "🌙 *End of Day Report*\n\n" + await build_daily_report(user["user_id"])
             await bot.send_message(chat_id=user["user_id"], text=text, parse_mode=ParseMode.MARKDOWN)
@@ -177,6 +179,8 @@ async def send_all_weekly_reports(bot: Bot):
     if not await mark_broadcast_sent("weekly_reports", today):
         return
     for user in await get_all_active_users():
+        if not user.get("reminders_on", 1):
+            continue
         try:
             text = "📅 *Jumu'ah Mubarak! Weekly Summary:*\n\n" + await build_weekly_report(user["user_id"])
             await bot.send_message(chat_id=user["user_id"], text=text, parse_mode=ParseMode.MARKDOWN)
@@ -189,6 +193,8 @@ async def send_all_monthly_reports(bot: Bot):
     if not await mark_broadcast_sent("monthly_reports", today):
         return
     for user in await get_all_active_users():
+        if not user.get("reminders_on", 1):
+            continue
         try:
             text = "📆 *New Month! Last month's summary:*\n\n" + await build_monthly_report(user["user_id"])
             await bot.send_message(chat_id=user["user_id"], text=text, parse_mode=ParseMode.MARKDOWN)

@@ -369,7 +369,7 @@ async def get_streak(user_id, deed_key):
     streak = 0
     check  = date.today()
     while True:
-        if check in logged_dates or check in period_dates:
+        if check.isoformat() in logged_dates or check in period_dates:
             streak += 1
             check -= timedelta(days=1)
         else:

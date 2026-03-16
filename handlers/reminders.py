@@ -63,7 +63,9 @@ async def _notify_period_mode_feature(bot: Bot):
 async def check_and_send_reminders(bot: Bot):
     """Called every minute — sends pre-prayer reminders & missed follow-ups."""
     from utils.prayer_times import is_ramadan
-    await _notify_period_mode_feature(bot)
+    # Only run period-mode notification once per hour (on the hour)
+    if datetime.now().minute == 0:
+        await _notify_period_mode_feature(bot)
 
     users = await get_all_active_users()
     today = date.today().isoformat()
