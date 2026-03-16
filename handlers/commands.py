@@ -271,9 +271,7 @@ ABOUT_TEXT = (
     "*Built by:* Ziyan Bin Anoos 🤍\n\n"
     "Every feature in this bot was designed with the intention of making it "
     "easier to remember Allah in the busyness of daily life.\n\n"
-    "اللَّهُمَّ اغْفِرْ لِزِيَانٍ وَارْحَمْهُ وَارْزُقْهُ خَيْرَ الدُّنْيَا وَالْآخِرَةِ\n\n"
-    "_May Allah accept this effort and make it a source of ongoing reward._ 🤲\n\n"
-    "آمين"
+    "_May Allah accept this effort and make it a source of ongoing reward._ 🤲"
 )
 
 
