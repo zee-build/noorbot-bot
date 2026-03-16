@@ -42,61 +42,77 @@ async def post_init(application: Application):
     tz = pytz.timezone(TIMEZONE)
     scheduler = AsyncIOScheduler(timezone=tz)
 
+    # misfire_grace_time=300: if the bot restarts and a job missed its window
+    # by more than 5 minutes, drop it instead of firing all at once on startup.
+    _grace = 300  # seconds
+
     scheduler.add_job(
         lambda: _run(send_daily_reports, application),
-        CronTrigger(hour=22, minute=30, timezone=tz), id="daily_reports"
+        CronTrigger(hour=22, minute=30, timezone=tz), id="daily_reports",
+        misfire_grace_time=_grace, coalesce=True,
     )
     scheduler.add_job(
         lambda: _run(send_weekly_reports, application),
-        CronTrigger(day_of_week="fri", hour=14, minute=30, timezone=tz), id="weekly_reports"
+        CronTrigger(day_of_week="fri", hour=14, minute=30, timezone=tz), id="weekly_reports",
+        misfire_grace_time=_grace, coalesce=True,
     )
     scheduler.add_job(
         lambda: _run(send_monthly_reports, application),
-        CronTrigger(day=1, hour=9, minute=0, timezone=tz), id="monthly_reports"
+        CronTrigger(day=1, hour=9, minute=0, timezone=tz), id="monthly_reports",
+        misfire_grace_time=_grace, coalesce=True,
     )
     scheduler.add_job(
         lambda: _run(check_reminders, application),
-        CronTrigger(minute="*", timezone=tz), id="prayer_check"
+        CronTrigger(minute="*", timezone=tz), id="prayer_check",
+        misfire_grace_time=90, coalesce=True,
     )
     # Morning dua/hadith + adhkar — 15 min after Fajr (~5:45 AM UAE)
     scheduler.add_job(
         lambda: _run(morning_content, application),
-        CronTrigger(hour=5, minute=45, timezone=tz), id="morning_content"
+        CronTrigger(hour=5, minute=45, timezone=tz), id="morning_content",
+        misfire_grace_time=_grace, coalesce=True,
     )
     # Evening adhkar — around Maghrib (6:00 PM UAE, adjust per season)
     scheduler.add_job(
         lambda: _run(evening_adhkar, application),
-        CronTrigger(hour=18, minute=15, timezone=tz), id="evening_adhkar"
+        CronTrigger(hour=18, minute=15, timezone=tz), id="evening_adhkar",
+        misfire_grace_time=_grace, coalesce=True,
     )
     # Sleep adhkar — 10:00 PM
     scheduler.add_job(
         lambda: _run(sleep_adhkar, application),
-        CronTrigger(hour=22, minute=0, timezone=tz), id="sleep_adhkar"
+        CronTrigger(hour=22, minute=0, timezone=tz), id="sleep_adhkar",
+        misfire_grace_time=_grace, coalesce=True,
     )
     # Weekly challenge — every Monday 7 AM
     scheduler.add_job(
         lambda: _run(weekly_challenge, application),
-        CronTrigger(day_of_week="mon", hour=7, minute=0, timezone=tz), id="weekly_challenge"
+        CronTrigger(day_of_week="mon", hour=7, minute=0, timezone=tz), id="weekly_challenge",
+        misfire_grace_time=_grace, coalesce=True,
     )
     # Ramadan suhoor reminder — 3:30 AM
     scheduler.add_job(
         lambda: _run(ramadan_suhoor, application),
-        CronTrigger(hour=3, minute=30, timezone=tz), id="ramadan_suhoor"
+        CronTrigger(hour=3, minute=30, timezone=tz), id="ramadan_suhoor",
+        misfire_grace_time=_grace, coalesce=True,
     )
     # Ramadan iftar reminder — 6:10 PM (before typical Maghrib)
     scheduler.add_job(
         lambda: _run(ramadan_iftar, application),
-        CronTrigger(hour=18, minute=10, timezone=tz), id="ramadan_iftar"
+        CronTrigger(hour=18, minute=10, timezone=tz), id="ramadan_iftar",
+        misfire_grace_time=_grace, coalesce=True,
     )
     # Ramadan tarawih reminder — 9:00 PM
     scheduler.add_job(
         lambda: _run(ramadan_tarawih, application),
-        CronTrigger(hour=21, minute=0, timezone=tz), id="ramadan_tarawih"
+        CronTrigger(hour=21, minute=0, timezone=tz), id="ramadan_tarawih",
+        misfire_grace_time=_grace, coalesce=True,
     )
     # Period mode expiration check — 12:01 AM daily
     scheduler.add_job(
         lambda: _run(check_period_expirations, application),
-        CronTrigger(hour=0, minute=1, timezone=tz), id="period_check"
+        CronTrigger(hour=0, minute=1, timezone=tz), id="period_check",
+        misfire_grace_time=_grace, coalesce=True,
     )
 
     scheduler.start()
