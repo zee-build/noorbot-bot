@@ -168,6 +168,9 @@ async def init_db():
         await conn.execute("""
             ALTER TABLE users ADD COLUMN IF NOT EXISTS gender TEXT DEFAULT 'unset'
         """)
+        await conn.execute("""
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS period_notified BOOLEAN DEFAULT FALSE
+        """)
 
         # ── Deduplicate goals ──────────────────────────────────
         await conn.execute("""
@@ -532,3 +535,15 @@ async def set_user_gender(user_id: int, gender: str):
 async def get_user_gender(user_id: int) -> str:
     row = await pool.fetchrow("SELECT gender FROM users WHERE user_id=$1", user_id)
     return row["gender"] if row else "unset"
+
+
+async def get_uninformed_female_users() -> list:
+    """Returns female users who haven't received the period mode notification yet."""
+    rows = await pool.fetch(
+        "SELECT * FROM users WHERE active=1 AND gender='female' AND (period_notified IS FALSE OR period_notified IS NULL)"
+    )
+    return [dict(r) for r in rows]
+
+
+async def mark_period_notified(user_id: int):
+    await pool.execute("UPDATE users SET period_notified=TRUE WHERE user_id=$1", user_id)

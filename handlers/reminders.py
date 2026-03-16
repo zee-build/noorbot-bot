@@ -9,7 +9,8 @@ from telegram.constants import ParseMode
 
 from utils.database import (
     get_all_active_users, mark_reminder_sent, mark_missed_followup_sent,
-    get_today_logs, get_user_goals, is_period_mode
+    get_today_logs, get_user_goals, is_period_mode,
+    get_uninformed_female_users, mark_period_notified,
 )
 from utils.prayer_times import (
     get_prayer_times, minutes_until_prayer, minutes_since_prayer,
@@ -30,8 +31,38 @@ PRAYER_HADITHS = {
 }
 
 
+async def _notify_period_mode_feature(bot: Bot):
+    """One-time notification to female users about the period tracking feature."""
+    users = await get_uninformed_female_users()
+    for user in users:
+        try:
+            await mark_period_notified(user["user_id"])  # mark first to avoid double-send on error
+            await bot.send_message(
+                chat_id=user["user_id"],
+                text=(
+                    "🌸 *A feature made for you*\n\n"
+                    "During your period, you can't pray or fast — and that's perfectly fine. "
+                    "But we don't want that to break your streaks or affect your progress.\n\n"
+                    "That's why NoorBot has *Period Mode* 💚\n\n"
+                    "While it's on:\n"
+                    "• Your streaks are protected — no gaps\n"
+                    "• Prayer reminders are paused\n"
+                    "• Your progress picks up right where you left off\n\n"
+                    "To activate it, just go to:\n"
+                    "📱 *Dashboard → Settings → Period Tracking*\n"
+                    "or tap /settings here in the chat.\n\n"
+                    "_May Allah make it easy for you._ 🤲"
+                ),
+                parse_mode=ParseMode.MARKDOWN,
+            )
+        except Exception as e:
+            logger.error(f"Period notification error {user['user_id']}: {e}")
+
+
 async def check_and_send_reminders(bot: Bot):
     """Called every minute — sends pre-prayer reminders & missed follow-ups."""
+    await _notify_period_mode_feature(bot)
+
     users = await get_all_active_users()
     today = date.today().isoformat()
 
