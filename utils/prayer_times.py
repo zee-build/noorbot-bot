@@ -131,6 +131,14 @@ async def get_city_coordinates(city: str) -> Optional[dict]:
         return None
 
 
+def fmt12(time_str: str) -> str:
+    """Convert 'HH:MM' (24h) to '12:MM AM/PM' for display."""
+    h, m = map(int, time_str.split(":"))
+    suffix = "AM" if h < 12 else "PM"
+    h12 = h % 12 or 12
+    return f"{h12}:{m:02d} {suffix}"
+
+
 def minutes_until_prayer(prayer_time_str: str, tz_name: str = TIMEZONE) -> int:
     tz  = pytz.timezone(tz_name)
     now = datetime.now(tz)
@@ -146,5 +154,5 @@ def minutes_since_prayer(prayer_time_str: str, tz_name: str = TIMEZONE) -> int:
 def format_prayer_schedule(times: dict, city: str = "") -> str:
     lines = [f"📅 *Prayer Times{' — ' + city if city else ''}*\n"]
     for key in PRAYER_KEYS:
-        lines.append(f"{PRAYER_EMOJIS[key]} *{PRAYER_NAMES[key]}*: `{times[key]}`")
+        lines.append(f"{PRAYER_EMOJIS[key]} *{PRAYER_NAMES[key]}*: `{fmt12(times[key])}`")
     return "\n".join(lines)
