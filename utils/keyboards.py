@@ -118,23 +118,27 @@ def add_goal_kb(existing_keys: set = None) -> InlineKeyboardMarkup:
 def main_menu_kb(has_webapp: bool = True) -> InlineKeyboardMarkup:
     rows = [
         [
-            InlineKeyboardButton("🕌 Prayers",    callback_data="view:prayers"),
-            InlineKeyboardButton("📿 Deeds",      callback_data="view:deeds"),
+            InlineKeyboardButton("🕌 Prayers",     callback_data="view:prayers"),
+            InlineKeyboardButton("📿 Deeds",       callback_data="view:deeds"),
         ],
         [
-            InlineKeyboardButton("📊 Today",      callback_data="view:today"),
-            InlineKeyboardButton("📅 Weekly",     callback_data="view:weekly"),
+            InlineKeyboardButton("📊 Today",       callback_data="view:today"),
+            InlineKeyboardButton("📅 Weekly",      callback_data="view:weekly"),
         ],
         [
+            InlineKeyboardButton("📆 Monthly",     callback_data="view:monthly"),
             InlineKeyboardButton("🏆 Leaderboard", callback_data="view:leaderboard"),
-            InlineKeyboardButton("🎯 Goals",        callback_data="view:goals"),
         ],
         [
-            InlineKeyboardButton("👤 Profile",  callback_data="view:profile"),
+            InlineKeyboardButton("🎯 Goals",       callback_data="view:goals"),
+            InlineKeyboardButton("📿 Adhkar",      callback_data="adhkar:menu"),
+        ],
+        [
+            InlineKeyboardButton("🌙 Progress Card", callback_data="view:card"),
+            InlineKeyboardButton("👤 Profile",       callback_data="view:profile"),
+        ],
+        [
             InlineKeyboardButton("⚙️ Settings", callback_data="view:settings"),
-        ],
-        [
-            InlineKeyboardButton("📿 Adhkar", callback_data="adhkar:menu"),
         ],
     ]
     if has_webapp and WEBAPP_URL:

@@ -77,72 +77,74 @@ def _draw_card(first_name: str, level: int, xp_in: int, xp_needed: int,
     return buf
 
 
-async def card_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Send a shareable progress card."""
-    user_id = update.effective_user.id
+async def _get_card_data(user_id: int):
+    """Shared data-fetching logic for both command and callback."""
     db_user = await get_user(user_id)
     if not db_user:
-        await update.message.reply_text("Send /start first to set up your account.")
-        return
+        return None, None, None, None, None, None, None, None
 
-    today = date.today()
     logs  = await get_today_logs(user_id)
     goals = await get_user_goals(user_id)
 
-    fardh_keys = {"fajr","dhuhr","asr","maghrib","isha"}
-    logged_keys = {l["deed_key"] for l in logs}
+    fardh_keys   = {"fajr", "dhuhr", "asr", "maghrib", "isha"}
+    logged_keys  = {l["deed_key"] for l in logs}
     prayers_done = sum(1 for k in fardh_keys if k in logged_keys)
-    score = sum(l["points"] for l in logs)
-    max_score = sum(g["points"] for g in goals) or 1
-    score_pct = round(score / max_score * 100)
-
+    score        = sum(l["points"] for l in logs)
+    max_score    = sum(g["points"] for g in goals) or 1
+    score_pct    = round(score / max_score * 100)
     level, xp_in, xp_needed = xp_progress(db_user["total_xp"])
-    fajr_streak = await get_streak(user_id, "fajr")
+    fajr_streak  = await get_streak(user_id, "fajr")
 
-    # Try Pillow image, fall back to text
+    return db_user, level, xp_in, xp_needed, prayers_done, score_pct, fajr_streak, logged_keys
+
+
+async def card_from_callback(query, context):
+    """Called from view:card inline button — sends photo as a new message."""
+    user_id = query.from_user.id
+    db_user, level, xp_in, xp_needed, prayers_done, score_pct, fajr_streak, _ = await _get_card_data(user_id)
+
+    if not db_user:
+        await query.answer("Send /start first.", show_alert=True)
+        return
+
+    today   = date.today()
+    caption = (
+        f"*{db_user['first_name']}'s NoorBot Progress Card*\n"
+        f"_{today.strftime('%A, %d %B %Y')}_\n\n"
+        "🌙 _May Allah accept our deeds and make us consistent._"
+    )
+
     try:
         buf = _draw_card(
-            first_name   = db_user["first_name"],
-            level        = level,
-            xp_in        = xp_in,
-            xp_needed    = xp_needed,
-            total_xp     = db_user["total_xp"],
-            prayers_done = prayers_done,
-            score_pct    = score_pct,
-            fajr_streak  = fajr_streak,
-            city         = db_user.get("city",""),
+            first_name=db_user["first_name"], level=level,
+            xp_in=xp_in, xp_needed=xp_needed, total_xp=db_user["total_xp"],
+            prayers_done=prayers_done, score_pct=score_pct,
+            fajr_streak=fajr_streak, city=db_user.get("city", ""),
         )
-        caption = (
-            f"*{db_user['first_name']}'s NoorBot Progress Card*\n"
-            f"_{today.strftime('%A, %d %B %Y')}_\n\n"
-            "🌙 _May Allah accept our deeds and make us consistent._"
+        await context.bot.send_photo(
+            chat_id=query.message.chat_id,
+            photo=buf, caption=caption, parse_mode="Markdown",
         )
-        await update.message.reply_photo(
-            photo=buf,
-            caption=caption,
-            parse_mode=ParseMode.MARKDOWN
-        )
+        await query.answer()
     except Exception as e:
-        logger.warning(f"Pillow card failed, sending text card: {e}")
-        await _send_text_card(update, db_user, level, xp_in, xp_needed,
-                              prayers_done, score_pct, fajr_streak)
+        logger.warning(f"Card callback image failed: {e}")
+        # Fall back to text card sent as new message
+        await context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text=_text_card(db_user, level, xp_in, xp_needed, prayers_done, score_pct, fajr_streak),
+            parse_mode="Markdown",
+        )
+        await query.answer()
 
 
-async def _send_text_card(update, db_user, level, xp_in, xp_needed,
-                          prayers_done, score_pct, fajr_streak):
-    """Text-based progress card as a fallback."""
-    today = date.today().strftime("%A, %d %B %Y")
+def _text_card(db_user, level, xp_in, xp_needed, prayers_done, score_pct, fajr_streak) -> str:
+    today     = date.today().strftime("%A, %d %B %Y")
     bar_width = 10
-    filled = round(xp_in / xp_needed * bar_width) if xp_needed else bar_width
-    bar = "█" * filled + "░" * (bar_width - filled)
-
-    prayer_row = ""
-    prayer_keys = ["fajr","dhuhr","asr","maghrib","isha"]
-    prayer_emojis = ["🌅","🌤","🌇","🌆","🌙"]
-    # We'll just show count
-    text = (
+    filled    = round(xp_in / xp_needed * bar_width) if xp_needed else bar_width
+    bar       = "█" * filled + "░" * (bar_width - filled)
+    return (
         f"┌──────────────────────────┐\n"
-        f"│  ☽ *NoorBot Progress Card*  │\n"
+        f"│  ☽ *NoorBot Progress Card*\n"
         f"├──────────────────────────┤\n"
         f"│  👤 *{db_user['first_name']}*\n"
         f"│  _{today}_\n"
@@ -154,8 +156,39 @@ async def _send_text_card(update, db_user, level, xp_in, xp_needed,
         f"│  🕌 Prayers: *{prayers_done}/5*\n"
         f"│  📊 Today: *{score_pct}%*\n"
         f"│  🔥 Fajr streak: *{fajr_streak} days*\n"
-        f"│  📍 {db_user.get('city','—')}\n"
+        f"│  📍 {db_user.get('city', '—')}\n"
         f"└──────────────────────────┘\n\n"
         "_Shared via NoorBot — track your ibadah daily_ 🌙"
     )
-    await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
+
+
+async def card_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Send a shareable progress card."""
+    user_id = update.effective_user.id
+    db_user, level, xp_in, xp_needed, prayers_done, score_pct, fajr_streak, _ = await _get_card_data(user_id)
+
+    if not db_user:
+        await update.message.reply_text("Send /start first to set up your account.")
+        return
+
+    today   = date.today()
+    caption = (
+        f"*{db_user['first_name']}'s NoorBot Progress Card*\n"
+        f"_{today.strftime('%A, %d %B %Y')}_\n\n"
+        "🌙 _May Allah accept our deeds and make us consistent._"
+    )
+
+    try:
+        buf = _draw_card(
+            first_name=db_user["first_name"], level=level,
+            xp_in=xp_in, xp_needed=xp_needed, total_xp=db_user["total_xp"],
+            prayers_done=prayers_done, score_pct=score_pct,
+            fajr_streak=fajr_streak, city=db_user.get("city", ""),
+        )
+        await update.message.reply_photo(photo=buf, caption=caption, parse_mode=ParseMode.MARKDOWN)
+    except Exception as e:
+        logger.warning(f"Pillow card failed, sending text card: {e}")
+        await update.message.reply_text(
+            _text_card(db_user, level, xp_in, xp_needed, prayers_done, score_pct, fajr_streak),
+            parse_mode=ParseMode.MARKDOWN
+        )

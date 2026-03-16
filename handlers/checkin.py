@@ -296,6 +296,10 @@ async def _handle_callback_inner(query, data, user_id, chat_id, context):
             text = await _build_leaderboard_text(user_id)
             await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=report_nav_kb())
 
+        elif view == "card":
+            from handlers.card import card_from_callback
+            await card_from_callback(query, context)
+
     # ── Settings actions ──────────────────────────────────
     elif data.startswith("settings:"):
         action = data.split(":")[1]
