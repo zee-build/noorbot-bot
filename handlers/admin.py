@@ -43,6 +43,7 @@ async def admin_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/stats\\_admin — Bot statistics\n"
         "/top10 — Top 10 users all time\n"
         "/broadcast — Send message to all users\n"
+        "/users — List all active users\n"
         "/inactive — List blocked/inactive users\n"
         "/user \\<id\\> — Get user info\n"
         "/pause\\_user \\<id\\> — Pause user\n"
@@ -205,6 +206,40 @@ async def user_info_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🏆 Total pts: *{total_pts:,}*\n"
     )
     await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
+
+
+async def active_users_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """List all active users. Usage: /users"""
+    if not await _check_admin(update):
+        return
+
+    rows = await pool.fetch(
+        "SELECT user_id, first_name, username, city, level, total_xp, joined_at FROM users WHERE active=1 ORDER BY joined_at DESC"
+    )
+    if not rows:
+        await update.message.reply_text("No active users found.")
+        return
+
+    lines = [f"✅ *Active Users ({len(rows)})*\n"]
+    for r in rows:
+        uname = f"@{r['username']}" if r["username"] else "no username"
+        lines.append(f"• `{r['user_id']}` — *{r['first_name']}* ({uname}) — Lvl {r['level']} — {r['city']} — joined {r['joined_at']}")
+
+    # Telegram message limit is 4096 chars — split if needed
+    text = "\n".join(lines)
+    if len(text) <= 4096:
+        await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
+    else:
+        chunk, chunks = [], []
+        for line in lines:
+            if sum(len(l) + 1 for l in chunk) + len(line) > 4000:
+                chunks.append("\n".join(chunk))
+                chunk = []
+            chunk.append(line)
+        if chunk:
+            chunks.append("\n".join(chunk))
+        for part in chunks:
+            await update.message.reply_text(part, parse_mode=ParseMode.MARKDOWN)
 
 
 async def inactive_users_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
