@@ -11,6 +11,7 @@ from utils.database import (
     get_all_active_users, mark_reminder_sent, mark_missed_followup_sent,
     get_today_logs, get_user_goals, is_period_mode,
     get_uninformed_female_users, mark_period_notified,
+    mark_broadcast_sent,
 )
 from utils.prayer_times import (
     get_prayer_times, minutes_until_prayer, minutes_since_prayer,
@@ -61,6 +62,7 @@ async def _notify_period_mode_feature(bot: Bot):
 
 async def check_and_send_reminders(bot: Bot):
     """Called every minute — sends pre-prayer reminders & missed follow-ups."""
+    from utils.prayer_times import is_ramadan
     await _notify_period_mode_feature(bot)
 
     users = await get_all_active_users()
@@ -97,6 +99,24 @@ async def check_and_send_reminders(bot: Bot):
                         sent = await mark_missed_followup_sent(user["user_id"], key, today)
                         if sent:
                             await _send_missed_followup(bot, user["user_id"], key)
+
+            # ── Ramadan Tarawih — 20 minutes after Isha ──
+            ramadan = await is_ramadan(user.get("latitude", 25.2048), user.get("longitude", 55.2708))
+            if ramadan and "isha" in times:
+                mins_since_isha = minutes_since_prayer(times["isha"], tz)
+                if 19 <= mins_since_isha <= 21:
+                    sent = await mark_reminder_sent(user["user_id"], "tarawih", today)
+                    if sent:
+                        await bot.send_message(
+                            chat_id=user["user_id"],
+                            text=(
+                                "🌙 *Time for Tarawih!*\n\n"
+                                "The Prophet ﷺ said: 'Whoever prays Tarawih with full faith and "
+                                "hoping for Allah's reward, his past sins will be forgiven.' — Bukhari\n\n"
+                                "Head to the masjid or pray at home. May Allah accept! 🤲"
+                            ),
+                            parse_mode="Markdown"
+                        )
 
         except Exception as e:
             logger.error(f"Reminder error user {user['user_id']}: {e}")
@@ -139,6 +159,9 @@ async def send_morning_content(bot: Bot):
     """Sends morning adhkar prompt + dua/hadith after Fajr."""
     from handlers.adhkar import send_morning_adhkar_prompt
     from utils.prayer_times import is_ramadan
+    today = date.today().isoformat()
+    if not await mark_broadcast_sent("morning_content", today):
+        return
     users = await get_all_active_users()
     today = date.today()
     content = MORNING_CONTENT[today.toordinal() % len(MORNING_CONTENT)]
@@ -166,6 +189,9 @@ async def send_morning_content(bot: Bot):
 async def send_evening_adhkar_reminder(bot: Bot):
     """Sends evening adhkar prompt around Maghrib time."""
     from handlers.adhkar import send_evening_adhkar_prompt
+    today = date.today().isoformat()
+    if not await mark_broadcast_sent("evening_adhkar", today):
+        return
     users = await get_all_active_users()
     for user in users:
         if not user.get("reminders_on", 1):
@@ -179,6 +205,9 @@ async def send_evening_adhkar_reminder(bot: Bot):
 async def send_sleep_adhkar_reminder(bot: Bot):
     """Sends sleep adhkar prompt at 10 PM."""
     from handlers.adhkar import send_sleep_adhkar_prompt
+    today = date.today().isoformat()
+    if not await mark_broadcast_sent("sleep_adhkar", today):
+        return
     users = await get_all_active_users()
     for user in users:
         if not user.get("reminders_on", 1):
@@ -192,6 +221,9 @@ async def send_sleep_adhkar_reminder(bot: Bot):
 async def send_ramadan_suhoor(bot: Bot):
     """Suhoor reminder — sent before Fajr (around 3:30 AM UAE)."""
     from utils.prayer_times import is_ramadan
+    today = date.today().isoformat()
+    if not await mark_broadcast_sent("ramadan_suhoor", today):
+        return
     users = await get_all_active_users()
     for user in users:
         if not user.get("reminders_on", 1):
@@ -219,6 +251,9 @@ async def send_ramadan_suhoor(bot: Bot):
 async def send_ramadan_iftar(bot: Bot):
     """Iftar reminder — sent before Maghrib (around Maghrib time)."""
     from utils.prayer_times import is_ramadan
+    today = date.today().isoformat()
+    if not await mark_broadcast_sent("ramadan_iftar", today):
+        return
     users = await get_all_active_users()
     for user in users:
         if not user.get("reminders_on", 1):
@@ -244,36 +279,12 @@ async def send_ramadan_iftar(bot: Bot):
             logger.error(f"Iftar reminder error {user['user_id']}: {e}")
 
 
-async def send_ramadan_tarawih(bot: Bot):
-    """Tarawih reminder — after Isha (around 9 PM UAE)."""
-    from utils.prayer_times import is_ramadan
-    from utils.keyboards import deed_kb
-    users = await get_all_active_users()
-    for user in users:
-        if not user.get("reminders_on", 1):
-            continue
-        try:
-            ramadan = await is_ramadan(user.get("latitude", 25.2048), user.get("longitude", 55.2708))
-            if not ramadan:
-                continue
-            await bot.send_message(
-                chat_id=user["user_id"],
-                text=(
-                    "🌙 *Time for Tarawih!*\n\n"
-                    "The Prophet ﷺ said: 'Whoever prays Tarawih with full faith and "
-                    "hoping for Allah's reward, his past sins will be forgiven.' — Bukhari\n\n"
-                    "Head to the masjid or pray at home. May Allah accept! 🤲"
-                ),
-                parse_mode=ParseMode.MARKDOWN
-            )
-        except Exception as e:
-            logger.error(f"Tarawih reminder error {user['user_id']}: {e}")
-
-
 async def send_friday_morning(bot: Bot):
     """Friday morning reminder — sent at 7:00 AM."""
     today = date.today()
     if today.weekday() != 4:  # 4 = Friday
+        return
+    if not await mark_broadcast_sent("friday_morning", today.isoformat()):
         return
     users = await get_all_active_users()
     text = (
@@ -302,6 +313,8 @@ async def send_friday_jumua(bot: Bot):
     today = date.today()
     if today.weekday() != 4:
         return
+    if not await mark_broadcast_sent("friday_jumua", today.isoformat()):
+        return
     users = await get_all_active_users()
     text = (
         "🕌 *Jumu'ah is soon!*\n\n"
@@ -324,6 +337,8 @@ async def send_friday_asr_dua(bot: Bot):
     """Friday post-Asr duʿa reminder — Sa'at al-Istijabah (4:30 PM)."""
     today = date.today()
     if today.weekday() != 4:
+        return
+    if not await mark_broadcast_sent("friday_asr_dua", today.isoformat()):
         return
     users = await get_all_active_users()
     text = (
@@ -433,6 +448,9 @@ async def send_friday_asr_dua_single(bot: Bot, chat_id: int):
 async def send_weekly_challenge(bot: Bot):
     """Sends a weekly challenge every Monday morning."""
     import random
+    today = date.today().isoformat()
+    if not await mark_broadcast_sent("weekly_challenge", today):
+        return
     challenge = random.choice(WEEKLY_CHALLENGES)
     users = await get_all_active_users()
 

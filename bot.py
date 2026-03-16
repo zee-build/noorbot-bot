@@ -102,12 +102,6 @@ async def post_init(application: Application):
         CronTrigger(hour=18, minute=10, timezone=tz), id="ramadan_iftar",
         misfire_grace_time=_grace, coalesce=True,
     )
-    # Ramadan tarawih reminder — 9:00 PM
-    scheduler.add_job(
-        lambda: _run(ramadan_tarawih, application),
-        CronTrigger(hour=21, minute=0, timezone=tz), id="ramadan_tarawih",
-        misfire_grace_time=_grace, coalesce=True,
-    )
     # Period mode expiration check — 12:01 AM daily
     scheduler.add_job(
         lambda: _run(check_period_expirations, application),
@@ -185,10 +179,6 @@ async def ramadan_suhoor(app):
 async def ramadan_iftar(app):
     from handlers.reminders import send_ramadan_iftar
     await send_ramadan_iftar(app.bot)
-
-async def ramadan_tarawih(app):
-    from handlers.reminders import send_ramadan_tarawih
-    await send_ramadan_tarawih(app.bot)
 
 async def friday_morning(app):
     from handlers.reminders import send_friday_morning

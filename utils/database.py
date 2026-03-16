@@ -145,6 +145,15 @@ async def init_db():
             )
         """)
 
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS broadcast_sent (
+                id          SERIAL PRIMARY KEY,
+                broadcast_key TEXT,
+                sent_date   TEXT,
+                UNIQUE(broadcast_key, sent_date)
+            )
+        """)
+
         # ── Migrate older DBs missing v2 columns ──────────────
         migrations = [
             ("users",     "total_xp",           "INTEGER DEFAULT 0"),
@@ -440,6 +449,15 @@ async def mark_missed_followup_sent(user_id, prayer_key, sent_date):
     result = await pool.execute(
         "INSERT INTO missed_followup_sent (user_id,prayer_key,sent_date) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING",
         user_id, prayer_key, sent_date
+    )
+    return result == "INSERT 0 1"
+
+
+async def mark_broadcast_sent(broadcast_key: str, sent_date: str) -> bool:
+    """Insert a broadcast dedup record. Returns True if inserted (first send), False if already sent."""
+    result = await pool.execute(
+        "INSERT INTO broadcast_sent (broadcast_key, sent_date) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+        broadcast_key, sent_date
     )
     return result == "INSERT 0 1"
 
