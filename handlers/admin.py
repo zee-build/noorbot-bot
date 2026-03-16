@@ -6,6 +6,7 @@ from datetime import date, timedelta
 from telegram import Update
 from telegram.ext import ContextTypes
 from telegram.constants import ParseMode
+from telegram.error import Forbidden, BadRequest
 
 from config import ADMIN_CHAT_ID
 from utils.database import (
@@ -123,6 +124,7 @@ async def broadcast_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     users = await get_all_users_admin()
     sent = 0
     failed = 0
+    blocked = 0
 
     await update.message.reply_text(f"📡 Broadcasting to {len(users)} users...")
 
@@ -136,11 +138,22 @@ async def broadcast_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 parse_mode=ParseMode.MARKDOWN
             )
             sent += 1
-        except Exception:
+        except Forbidden:
+            # User blocked the bot — deactivate them
+            await set_user_active(user["user_id"], False)
+            blocked += 1
             failed += 1
+            logger.info(f"Broadcast: user {user['user_id']} blocked bot — deactivated")
+        except BadRequest as e:
+            failed += 1
+            logger.warning(f"Broadcast: BadRequest for {user['user_id']}: {e}")
+        except Exception as e:
+            failed += 1
+            logger.error(f"Broadcast: failed for {user['user_id']}: {e}")
 
+    blocked_note = f"\n🚫 Blocked & deactivated: {blocked}" if blocked else ""
     await update.message.reply_text(
-        f"✅ Broadcast complete!\n📤 Sent: {sent}\n❌ Failed: {failed}"
+        f"✅ Broadcast complete!\n📤 Sent: {sent}\n❌ Failed: {failed}{blocked_note}"
     )
 
 
