@@ -592,8 +592,8 @@ SLEEP_ADHKAR = [
 
 # Map deed keys to adhkar collections
 ADHKAR_COLLECTIONS = {
-    "dhikr_am":   {"label": "Morning Adhkar",    "data": MORNING_ADHKAR,     "points": 2, "audio_url": f"{_AUDIO}adhkar-sabah.mpeg"},
-    "dhikr_pm":   {"label": "Evening Adhkar",    "data": EVENING_ADHKAR,     "points": 2, "audio_url": f"{_AUDIO}adhkar-masaa.mpeg"},
+    "dhikr_am":   {"label": "Morning Adhkar",    "data": MORNING_ADHKAR,     "points": 2, "audio_url": f"{_AUDIO}adhkar-sabah.mp3"},
+    "dhikr_pm":   {"label": "Evening Adhkar",    "data": EVENING_ADHKAR,     "points": 2, "audio_url": f"{_AUDIO}adhkar-masaa.mp3"},
     "dhikr":      {"label": "Dhikr after Salah", "data": AFTER_SALAH_ADHKAR, "points": 1},
     "dhikr_nawm": {"label": "Sleep Adhkar",      "data": SLEEP_ADHKAR,       "points": 1},
 }
