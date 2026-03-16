@@ -6,7 +6,7 @@ from datetime import date, timedelta
 from telegram import Bot
 from telegram.constants import ParseMode
 
-from utils.database import get_all_active_users, get_user_goals, get_logs_for_date, get_week_logs, get_month_scores, get_user, is_period_mode
+from utils.database import get_all_active_users, get_user_goals, get_logs_for_date, get_week_logs, get_month_scores, get_user, is_period_mode, mark_broadcast_sent
 from utils.prayer_times import is_ramadan
 from config import PERFORMANCE_TIERS, xp_progress
 
@@ -161,6 +161,9 @@ async def build_monthly_report(user_id: int) -> str:
 
 
 async def send_all_daily_reports(bot: Bot):
+    today = date.today().isoformat()
+    if not await mark_broadcast_sent("daily_reports", today):
+        return
     for user in await get_all_active_users():
         try:
             text = "🌙 *End of Day Report*\n\n" + await build_daily_report(user["user_id"])
@@ -170,6 +173,9 @@ async def send_all_daily_reports(bot: Bot):
 
 
 async def send_all_weekly_reports(bot: Bot):
+    today = date.today().isoformat()
+    if not await mark_broadcast_sent("weekly_reports", today):
+        return
     for user in await get_all_active_users():
         try:
             text = "📅 *Jumu'ah Mubarak! Weekly Summary:*\n\n" + await build_weekly_report(user["user_id"])
@@ -179,6 +185,9 @@ async def send_all_weekly_reports(bot: Bot):
 
 
 async def send_all_monthly_reports(bot: Bot):
+    today = date.today().isoformat()
+    if not await mark_broadcast_sent("monthly_reports", today):
+        return
     for user in await get_all_active_users():
         try:
             text = "📆 *New Month! Last month's summary:*\n\n" + await build_monthly_report(user["user_id"])
