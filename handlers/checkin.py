@@ -324,6 +324,15 @@ async def _handle_callback_inner(query, data, user_id, chat_id, context):
             from handlers.card import card_from_callback
             await card_from_callback(query, context)
 
+        elif view == "about":
+            from handlers.commands import ABOUT_TEXT
+            await query.edit_message_text(
+                ABOUT_TEXT, parse_mode=ParseMode.MARKDOWN,
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🏠 Home", callback_data="view:home")]
+                ])
+            )
+
     # ── Settings actions ──────────────────────────────────
     elif data.startswith("settings:"):
         action = data.split(":")[1]

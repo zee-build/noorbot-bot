@@ -141,6 +141,7 @@ def main_menu_kb(has_webapp: bool = True) -> InlineKeyboardMarkup:
         ],
         [
             InlineKeyboardButton("⚙️ Settings", callback_data="view:settings"),
+            InlineKeyboardButton("ℹ️ About",    callback_data="view:about"),
         ],
     ]
     if has_webapp and WEBAPP_URL:

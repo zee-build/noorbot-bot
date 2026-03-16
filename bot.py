@@ -14,7 +14,7 @@ import pytz
 
 from handlers.commands import (
     start, menu, profile, goals, stats, report,
-    weekly, monthly, settings_cmd, help_command, leaderboard_cmd
+    weekly, monthly, settings_cmd, help_command, leaderboard_cmd, about_cmd
 )
 from handlers.checkin import handle_callback, handle_text, handle_location
 from handlers.card import card_cmd
@@ -242,6 +242,7 @@ def main():
     app.add_handler(CommandHandler("monthly",     monthly))
     app.add_handler(CommandHandler("settings",    settings_cmd))
     app.add_handler(CommandHandler("help",        help_command))
+    app.add_handler(CommandHandler("about",       about_cmd))
     app.add_handler(CommandHandler("leaderboard", leaderboard_cmd))
     app.add_handler(CommandHandler("card",        card_cmd))
 

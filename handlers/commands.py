@@ -256,11 +256,30 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/settings — City, reminders, groups\n"
         "/leaderboard — Top users this week\n"
         "/card — Shareable progress card 🌙\n"
+        "/about — About NoorBot\n"
         "/help — This message\n\n"
         "Prayer reminders fire 15 min before each salah. ☽\n"
         "_Share your location to auto-detect city & prayer times._"
     )
     await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
+
+
+ABOUT_TEXT = (
+    "☽ *About NoorBot*\n\n"
+    "NoorBot is an Islamic productivity companion built to help Muslims "
+    "stay consistent with their prayers, dhikr, and daily ibadah — one day at a time.\n\n"
+    "*Built by:* Ziyan Bin Anoos 🤍\n\n"
+    "Every feature in this bot was designed with the intention of making it "
+    "easier to remember Allah in the busyness of daily life.\n\n"
+    "اللَّهُمَّ اغْفِرْ لِزِيَانٍ وَارْحَمْهُ وَارْزُقْهُ خَيْرَ الدُّنْيَا وَالْآخِرَةِ\n"
+    "_O Allah, forgive Ziyan, have mercy on him, and grant him the best of this world and the next._\n\n"
+    "_May Allah accept this effort and make it a source of ongoing reward._ 🤲\n\n"
+    "آمين"
+)
+
+
+async def about_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(ABOUT_TEXT, parse_mode=ParseMode.MARKDOWN)
 
 
 async def leaderboard_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
