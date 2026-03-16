@@ -524,10 +524,10 @@ async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"Reverse geocode failed: {e}")
         city, country = "Unknown", ""
 
-    await update_user_location(user_id, city, country, lat, lng)
-
     from utils.prayer_times import get_prayer_times, format_prayer_schedule
-    times = await get_prayer_times(lat, lng)
+    times = await get_prayer_times(lat, lng, country=country)
+    tz = times.get("_tz") if times else None
+    await update_user_location(user_id, city, country, lat, lng, timezone=tz)
     schedule = format_prayer_schedule(times, city) if times else ""
 
     PENDING.pop(user_id, None)
@@ -562,8 +562,9 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=await _settings_kb_for(user_id)
             )
             return
-        await update_user_location(user_id, result["city"], result["country"], result["lat"], result["lng"])
-        times = await get_prayer_times(result["lat"], result["lng"])
+        times = await get_prayer_times(result["lat"], result["lng"], country=result["country"])
+        tz = times.get("_tz") if times else None
+        await update_user_location(user_id, result["city"], result["country"], result["lat"], result["lng"], timezone=tz)
         schedule = format_prayer_schedule(times, result["city"]) if times else ""
         PENDING.pop(user_id, None)
         await update.message.reply_text(

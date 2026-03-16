@@ -214,11 +214,17 @@ async def get_all_active_users():
     return [dict(r) for r in rows]
 
 
-async def update_user_location(user_id, city, country, lat, lng):
-    await pool.execute(
-        "UPDATE users SET city=$1,country=$2,latitude=$3,longitude=$4 WHERE user_id=$5",
-        city, country, lat, lng, user_id
-    )
+async def update_user_location(user_id, city, country, lat, lng, timezone=None):
+    if timezone:
+        await pool.execute(
+            "UPDATE users SET city=$1,country=$2,latitude=$3,longitude=$4,timezone=$5 WHERE user_id=$6",
+            city, country, lat, lng, timezone, user_id
+        )
+    else:
+        await pool.execute(
+            "UPDATE users SET city=$1,country=$2,latitude=$3,longitude=$4 WHERE user_id=$5",
+            city, country, lat, lng, user_id
+        )
 
 
 async def update_user_reminders(user_id, on: bool):

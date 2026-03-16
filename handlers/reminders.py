@@ -78,7 +78,7 @@ async def check_and_send_reminders(bot: Bot):
             if await is_period_mode(user["user_id"]):
                 continue
 
-            times = await get_prayer_times(user["latitude"], user["longitude"])
+            times = await get_prayer_times(user["latitude"], user["longitude"], country=user.get("country", ""))
             if not times:
                 continue
             tz = user.get("timezone", "Asia/Dubai")
@@ -234,7 +234,7 @@ async def send_ramadan_suhoor(bot: Bot):
             ramadan = await is_ramadan(user.get("latitude", 25.2048), user.get("longitude", 55.2708))
             if not ramadan:
                 continue
-            times = await get_prayer_times(user["latitude"], user["longitude"])
+            times = await get_prayer_times(user["latitude"], user["longitude"], country=user.get("country", ""))
             fajr_time = times.get("fajr", "05:00") if times else "05:00"
             await bot.send_message(
                 chat_id=user["user_id"],
@@ -264,7 +264,7 @@ async def send_ramadan_iftar(bot: Bot):
             ramadan = await is_ramadan(user.get("latitude", 25.2048), user.get("longitude", 55.2708))
             if not ramadan:
                 continue
-            times = await get_prayer_times(user["latitude"], user["longitude"])
+            times = await get_prayer_times(user["latitude"], user["longitude"], country=user.get("country", ""))
             maghrib_time = times.get("maghrib", "18:30") if times else "18:30"
             await bot.send_message(
                 chat_id=user["user_id"],
