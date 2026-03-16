@@ -3,7 +3,7 @@ Callback handler v2 — prayer checkins, deeds, XP, level-up, city, groups, lead
 """
 import logging
 from datetime import date, timedelta
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from telegram.constants import ParseMode
 
@@ -144,6 +144,27 @@ async def _handle_callback_inner(query, data, user_id, chat_id, context):
         goal  = next((g for g in goals if g["deed_key"] == deed_key), None)
         if not goal:
             await query.answer("Goal not found.", show_alert=True)
+            return
+
+        # For adhkar deeds, offer to actually do them instead of silently logging
+        from data.adhkar import ADHKAR_COLLECTIONS
+        if deed_key in ADHKAR_COLLECTIONS:
+            col = ADHKAR_COLLECTIONS[deed_key]
+            logs = await get_today_logs(user_id)
+            already_done = any(l["deed_key"] == deed_key for l in logs)
+            if already_done:
+                await query.answer("✅ Already logged today!", show_alert=True)
+                return
+            await query.edit_message_text(
+                f"📿 *{col['label']}*\n\n"
+                "Would you like to recite the adhkar now, or just log that you've already done them?",
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("📿 Start reciting now", callback_data=f"adhkar:start:{deed_key}:0")],
+                    [InlineKeyboardButton("✅ Already done — log it", callback_data=f"adhkar:already:{deed_key}")],
+                    [InlineKeyboardButton("‹ Back to Deeds", callback_data="view:deeds")],
+                ])
+            )
             return
 
         logged, xp = await log_deed(user_id, deed_key, goal["deed_label"], pts)
