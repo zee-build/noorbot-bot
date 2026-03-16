@@ -39,6 +39,12 @@ async def post_init(application: Application):
     await init_db()
     logger.info("✅ Database initialised")
 
+    from config import ADMIN_CHAT_ID
+    if ADMIN_CHAT_ID:
+        logger.info(f"✅ Admin configured: {ADMIN_CHAT_ID}")
+    else:
+        logger.warning("⚠️  ADMIN_CHAT_ID is not set — admin commands will be disabled! Set it in Railway env vars.")
+
     tz = pytz.timezone(TIMEZONE)
     scheduler = AsyncIOScheduler(timezone=tz)
 

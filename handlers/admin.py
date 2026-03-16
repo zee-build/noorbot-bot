@@ -17,11 +17,16 @@ logger = logging.getLogger(__name__)
 
 
 def _is_admin(user_id: int) -> bool:
-    return ADMIN_CHAT_ID and user_id == ADMIN_CHAT_ID
+    if not ADMIN_CHAT_ID:
+        logger.warning("ADMIN_CHAT_ID is not set — all admin commands will be denied.")
+        return False
+    return user_id == ADMIN_CHAT_ID
 
 
 async def _check_admin(update: Update) -> bool:
-    if not _is_admin(update.effective_user.id):
+    user_id = update.effective_user.id
+    if not _is_admin(user_id):
+        logger.warning(f"Admin check failed: user_id={user_id}, ADMIN_CHAT_ID={ADMIN_CHAT_ID}")
         await update.message.reply_text("❌ Admin only.")
         return False
     return True
