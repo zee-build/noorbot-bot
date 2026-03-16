@@ -270,6 +270,83 @@ async def send_ramadan_tarawih(bot: Bot):
             logger.error(f"Tarawih reminder error {user['user_id']}: {e}")
 
 
+async def send_friday_morning(bot: Bot):
+    """Friday morning reminder — sent at 7:00 AM."""
+    today = date.today()
+    if today.weekday() != 4:  # 4 = Friday
+        return
+    users = await get_all_active_users()
+    text = (
+        "🌿 *Jumu'ah Mubarak!*\n\n"
+        "*Start your Friday well:*\n"
+        "• Perform ghusl and wear your best, clean clothes\n"
+        "• Apply perfume (for men)\n"
+        "• Remember — Friday is a blessed day 🤍\n\n"
+        "*During the day:*\n"
+        "• Read Surah Al-Kahf\n"
+        "• Increase salawat upon the Prophet ﷺ\n"
+        "• Make duʿa frequently and remember Allah throughout\n\n"
+        "_'The best day on which the sun has risen is Friday.'_ — Muslim"
+    )
+    for user in users:
+        if not user.get("reminders_on", 1):
+            continue
+        try:
+            await bot.send_message(chat_id=user["user_id"], text=text, parse_mode=ParseMode.MARKDOWN)
+        except Exception as e:
+            logger.error(f"Friday morning error {user['user_id']}: {e}")
+
+
+async def send_friday_jumua(bot: Bot):
+    """Friday Jumu'ah reminder — sent at 11:30 AM."""
+    today = date.today()
+    if today.weekday() != 4:
+        return
+    users = await get_all_active_users()
+    text = (
+        "🕌 *Jumu'ah is soon!*\n\n"
+        "• Go to the masjid *early* — the earlier you arrive, the greater the reward\n"
+        "• Pray Tahiyyat al-Masjid when you enter\n"
+        "• Listen attentively to the khutbah\n\n"
+        "_'Whoever goes early to Jumu'ah is like one who offered a camel for Allah's sake.'_ — Bukhari\n\n"
+        "May Allah accept your Jumu'ah. 🤲"
+    )
+    for user in users:
+        if not user.get("reminders_on", 1):
+            continue
+        try:
+            await bot.send_message(chat_id=user["user_id"], text=text, parse_mode=ParseMode.MARKDOWN)
+        except Exception as e:
+            logger.error(f"Friday Jumu'ah error {user['user_id']}: {e}")
+
+
+async def send_friday_asr_dua(bot: Bot):
+    """Friday post-Asr duʿa reminder — Sa'at al-Istijabah (4:30 PM)."""
+    today = date.today()
+    if today.weekday() != 4:
+        return
+    users = await get_all_active_users()
+    text = (
+        "🤲 *Sa'at al-Istijabah — The Hour of Answered Duʿa*\n\n"
+        "After Asr until Maghrib is a special time on Friday when duʿa is accepted.\n\n"
+        "Increase your supplications now:\n"
+        "• Ask for forgiveness\n"
+        "• Ask for your needs in this life and the next\n"
+        "• Send salawat upon the Prophet ﷺ\n"
+        "• Do not leave this hour without making duʿa\n\n"
+        "_'On Friday there is a time when, if a Muslim stands and prays and asks Allah for something good, "
+        "He will give it to him.'_ — Bukhari\n\n"
+        "May Allah fill our Friday with mercy and accept our duʿa. 🌿"
+    )
+    for user in users:
+        if not user.get("reminders_on", 1):
+            continue
+        try:
+            await bot.send_message(chat_id=user["user_id"], text=text, parse_mode=ParseMode.MARKDOWN)
+        except Exception as e:
+            logger.error(f"Friday Asr duʿa error {user['user_id']}: {e}")
+
+
 async def send_weekly_challenge(bot: Bot):
     """Sends a weekly challenge every Monday morning."""
     import random

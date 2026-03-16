@@ -17,8 +17,10 @@ def prayer_checkin_kb(prayer_key: str) -> InlineKeyboardMarkup:
 
 def missed_followup_kb(prayer_key: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("✅ I made it up (Qada)", callback_data=f"pray:{prayer_key}:home")],
-        [InlineKeyboardButton("🤲 I'll try next time",  callback_data=f"dismiss:missed:{prayer_key}")],
+        [InlineKeyboardButton("🕌 Yes, prayed with Jama'ah", callback_data=f"pray:{prayer_key}:jamaah")],
+        [InlineKeyboardButton("🏠 Yes, prayed at home",      callback_data=f"pray:{prayer_key}:home")],
+        [InlineKeyboardButton("✅ I made it up (Qada)",      callback_data=f"pray:{prayer_key}:home")],
+        [InlineKeyboardButton("🤲 I'll try next time",       callback_data=f"dismiss:missed:{prayer_key}")],
     ])
 
 

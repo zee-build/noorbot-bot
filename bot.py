@@ -114,6 +114,24 @@ async def post_init(application: Application):
         CronTrigger(hour=0, minute=1, timezone=tz), id="period_check",
         misfire_grace_time=_grace, coalesce=True,
     )
+    # Friday morning reminder — 7:00 AM every Friday
+    scheduler.add_job(
+        lambda: _run(friday_morning, application),
+        CronTrigger(day_of_week="fri", hour=7, minute=0, timezone=tz), id="friday_morning",
+        misfire_grace_time=_grace, coalesce=True,
+    )
+    # Friday Jumu'ah reminder — 11:30 AM every Friday
+    scheduler.add_job(
+        lambda: _run(friday_jumua, application),
+        CronTrigger(day_of_week="fri", hour=11, minute=30, timezone=tz), id="friday_jumua",
+        misfire_grace_time=_grace, coalesce=True,
+    )
+    # Friday post-Asr duʿa / Sa'at al-Istijabah — 4:30 PM every Friday
+    scheduler.add_job(
+        lambda: _run(friday_asr_dua, application),
+        CronTrigger(day_of_week="fri", hour=16, minute=30, timezone=tz), id="friday_asr_dua",
+        misfire_grace_time=_grace, coalesce=True,
+    )
 
     scheduler.start()
     logger.info("✅ Scheduler started")
@@ -171,6 +189,18 @@ async def ramadan_iftar(app):
 async def ramadan_tarawih(app):
     from handlers.reminders import send_ramadan_tarawih
     await send_ramadan_tarawih(app.bot)
+
+async def friday_morning(app):
+    from handlers.reminders import send_friday_morning
+    await send_friday_morning(app.bot)
+
+async def friday_jumua(app):
+    from handlers.reminders import send_friday_jumua
+    await send_friday_jumua(app.bot)
+
+async def friday_asr_dua(app):
+    from handlers.reminders import send_friday_asr_dua
+    await send_friday_asr_dua(app.bot)
 
 async def check_period_expirations(app):
     from utils.database import get_users_period_ending_today, deactivate_period_mode
