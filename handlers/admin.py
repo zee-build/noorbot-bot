@@ -43,6 +43,7 @@ async def admin_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/stats\\_admin — Bot statistics\n"
         "/top10 — Top 10 users all time\n"
         "/broadcast — Send message to all users\n"
+        "/inactive — List blocked/inactive users\n"
         "/user \\<id\\> — Get user info\n"
         "/pause\\_user \\<id\\> — Pause user\n"
         "/resume\\_user \\<id\\> — Resume user\n"
@@ -204,6 +205,26 @@ async def user_info_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🏆 Total pts: *{total_pts:,}*\n"
     )
     await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
+
+
+async def inactive_users_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """List all inactive/blocked users. Usage: /inactive"""
+    if not await _check_admin(update):
+        return
+
+    rows = await pool.fetch(
+        "SELECT user_id, first_name, username, joined_at FROM users WHERE active=0 ORDER BY joined_at DESC"
+    )
+    if not rows:
+        await update.message.reply_text("✅ No inactive users.")
+        return
+
+    lines = [f"🚫 *Inactive Users ({len(rows)})*\n"]
+    for r in rows:
+        uname = f"@{r['username']}" if r["username"] else "no username"
+        lines.append(f"• `{r['user_id']}` — *{r['first_name']}* ({uname}) — joined {r['joined_at']}")
+
+    await update.message.reply_text("\n".join(lines), parse_mode=ParseMode.MARKDOWN)
 
 
 async def pause_user_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):

@@ -20,7 +20,7 @@ from handlers.checkin import handle_callback, handle_text, handle_location
 from handlers.card import card_cmd
 from handlers.admin import (
     admin_cmd, stats_admin, top10_cmd, broadcast_cmd,
-    user_info_cmd, pause_user_cmd, resume_user_cmd
+    user_info_cmd, pause_user_cmd, resume_user_cmd, inactive_users_cmd
 )
 from utils.database import init_db
 from config import BOT_TOKEN, TIMEZONE
@@ -250,6 +250,7 @@ def main():
     app.add_handler(CommandHandler("user",        user_info_cmd))
     app.add_handler(CommandHandler("pause_user",  pause_user_cmd))
     app.add_handler(CommandHandler("resume_user", resume_user_cmd))
+    app.add_handler(CommandHandler("inactive",    inactive_users_cmd))
 
     # Adhkar command + callbacks
     from handlers.adhkar import handle_adhkar_callback, adhkar_menu_cmd
