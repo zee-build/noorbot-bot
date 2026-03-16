@@ -183,13 +183,32 @@ async def handle_adhkar_callback(update: Update, context: ContextTypes.DEFAULT_T
     # ── Audio (collection-level) ───────────────────────────
     if action == "audio_col":
         col_audio_url = col.get("audio_url")
-        if col_audio_url:
+        if not col_audio_url:
+            return
+        chat_id = query.message.chat_id
+        try:
+            import asyncio, urllib.request, io
+            from telegram import InputFile
+
+            def _fetch(url):
+                with urllib.request.urlopen(url, timeout=60) as resp:
+                    return resp.read()
+
+            data_bytes = await asyncio.to_thread(_fetch, col_audio_url)
+            buf = io.BytesIO(data_bytes)
+            buf.name = col_audio_url.split("/")[-1]
             await context.bot.send_audio(
-                chat_id=query.message.chat_id,
-                audio=col_audio_url,
+                chat_id=chat_id,
+                audio=InputFile(buf),
                 title=col["label"],
                 caption=f"🎵 *{col['label']}* — full recitation",
                 parse_mode=ParseMode.MARKDOWN,
+            )
+        except Exception as e:
+            logger.warning(f"audio_col send failed: {e}")
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text="⚠️ Could not load audio right now. Please try again shortly.",
             )
         return
 
@@ -199,13 +218,26 @@ async def handle_adhkar_callback(update: Update, context: ContextTypes.DEFAULT_T
         dhikr = adhkar_list[index]
         audio_url = dhikr.get("audio_url")
         if audio_url:
-            await context.bot.send_audio(
-                chat_id=query.message.chat_id,
-                audio=audio_url,
-                title=dhikr["title"],
-                caption=f"📿 *{dhikr['title']}*",
-                parse_mode=ParseMode.MARKDOWN,
-            )
+            try:
+                import asyncio, urllib.request, io
+                from telegram import InputFile
+
+                def _fetch(url):
+                    with urllib.request.urlopen(url, timeout=30) as resp:
+                        return resp.read()
+
+                data_bytes = await asyncio.to_thread(_fetch, audio_url)
+                buf = io.BytesIO(data_bytes)
+                buf.name = audio_url.split("/")[-1]
+                await context.bot.send_audio(
+                    chat_id=query.message.chat_id,
+                    audio=InputFile(buf),
+                    title=dhikr["title"],
+                    caption=f"📿 *{dhikr['title']}*",
+                    parse_mode=ParseMode.MARKDOWN,
+                )
+            except Exception as e:
+                logger.warning(f"audio send failed: {e}")
         return
 
     # ── Start ──────────────────────────────────────────────
