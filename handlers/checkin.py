@@ -3,7 +3,10 @@ Callback handler v2 — prayer checkins, deeds, XP, level-up, city, groups, lead
 """
 import logging
 from datetime import date, timedelta
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import (
+    Update, InlineKeyboardButton, InlineKeyboardMarkup,
+    KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove,
+)
 from telegram.ext import ContextTypes
 from telegram.constants import ParseMode
 
@@ -329,9 +332,19 @@ async def _handle_callback_inner(query, data, user_id, chat_id, context):
             PENDING[user_id] = "awaiting_city"
             await query.edit_message_text(
                 "📍 *Change City*\n\n"
-                "Type your city name and I'll update your prayer times.\n\n"
+                "Tap *Share Location* for automatic detection, "
+                "or type your city name below.\n\n"
                 "_Example: Abu Dhabi, London, Karachi_",
                 parse_mode=ParseMode.MARKDOWN
+            )
+            loc_kb = ReplyKeyboardMarkup(
+                [[KeyboardButton("📍 Share Location", request_location=True)]],
+                resize_keyboard=True,
+                one_time_keyboard=True,
+            )
+            await query.message.reply_text(
+                "👇 Tap the button to share your location, or just type your city.",
+                reply_markup=loc_kb,
             )
         elif action == "addgoal":
             existing = await get_user_goals(user_id)
@@ -494,7 +507,11 @@ async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"✅ *Location set to {city}!*\n\n{schedule}\n\n"
         "_Prayer reminders will now use your exact location._",
         parse_mode=ParseMode.MARKDOWN,
-        reply_markup=main_menu_kb()
+        reply_markup=ReplyKeyboardRemove(),
+    )
+    await update.message.reply_text(
+        "What would you like to do next?",
+        reply_markup=main_menu_kb(),
     )
 
 
@@ -524,7 +541,11 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             f"✅ *Location updated to {result['city']}!*\n\n{schedule}",
             parse_mode=ParseMode.MARKDOWN,
-            reply_markup=main_menu_kb()
+            reply_markup=ReplyKeyboardRemove(),
+        )
+        await update.message.reply_text(
+            "What would you like to do next?",
+            reply_markup=main_menu_kb(),
         )
 
     elif pending == "awaiting_group_name":
