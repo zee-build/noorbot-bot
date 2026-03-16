@@ -34,6 +34,7 @@ def _adhkar_card(dhikr: dict, index: int, total: int, collection_key: str,
         f"✨ _{dhikr['benefit']}_"
     )
 
+    from utils.keyboards import _nav_row
     is_last = (index == total - 1)
     rows = [
         [InlineKeyboardButton(
@@ -55,6 +56,7 @@ def _adhkar_card(dhikr: dict, index: int, total: int, collection_key: str,
             "🔊 Listen to Recitation",
             callback_data=f"adhkar:audio:{collection_key}:{index}"
         )])
+    rows.append(_nav_row())
     return text, InlineKeyboardMarkup(rows)
 
 

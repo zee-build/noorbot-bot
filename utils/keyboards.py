@@ -4,6 +4,15 @@ from config import WEBAPP_URL
 FARDH_KEYS = {"fajr", "dhuhr", "asr", "maghrib", "isha"}
 
 
+def _nav_row() -> list:
+    """Standard bottom row: Dashboard (if set) + Home."""
+    row = []
+    if WEBAPP_URL:
+        row.append(InlineKeyboardButton("🌐 Dashboard", web_app=WebAppInfo(url=WEBAPP_URL)))
+    row.append(InlineKeyboardButton("🏠 Home", callback_data="view:home"))
+    return row
+
+
 def prayer_checkin_kb(prayer_key: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🕌 Prayed with Jama'ah", callback_data=f"pray:{prayer_key}:jamaah")],
@@ -12,6 +21,7 @@ def prayer_checkin_kb(prayer_key: str) -> InlineKeyboardMarkup:
             InlineKeyboardButton("⏰ Snooze 10 min",     callback_data=f"snooze:{prayer_key}:10"),
         ],
         [InlineKeyboardButton("😔 Missed it",            callback_data=f"pray:{prayer_key}:missed")],
+        _nav_row(),
     ])
 
 
@@ -21,6 +31,7 @@ def missed_followup_kb(prayer_key: str) -> InlineKeyboardMarkup:
         [InlineKeyboardButton("🏠 Yes, prayed at home",      callback_data=f"pray:{prayer_key}:home")],
         [InlineKeyboardButton("✅ I made it up (Qada)",      callback_data=f"pray:{prayer_key}:home")],
         [InlineKeyboardButton("🤲 I'll try next time",       callback_data=f"dismiss:missed:{prayer_key}")],
+        _nav_row(),
     ])
 
 
@@ -40,7 +51,7 @@ def prayer_log_kb(logged_prayers: set) -> InlineKeyboardMarkup:
         else:
             rows.append([InlineKeyboardButton(f"🕌 {label} — tap to log", callback_data=f"praymenu:{key}")])
     rows.append([InlineKeyboardButton("📿 Sunnah deeds", callback_data="view:deeds")])
-    rows.append([InlineKeyboardButton("🏠 Home", callback_data="view:home")])
+    rows.append(_nav_row())
     return InlineKeyboardMarkup(rows)
 
 
@@ -57,7 +68,7 @@ def deed_kb(goals: list, logged_keys: set) -> InlineKeyboardMarkup:
         InlineKeyboardButton("🕌 Prayers",   callback_data="view:prayers"),
         InlineKeyboardButton("📊 Today",     callback_data="view:today"),
     ])
-    rows.append([InlineKeyboardButton("🏠 Home", callback_data="view:home")])
+    rows.append(_nav_row())
     return InlineKeyboardMarkup(rows)
 
 
@@ -69,7 +80,6 @@ def after_prayer_kb(prayer_key: str, logged_prayers: set, ramadan: bool = False)
     rows = []
 
     if remaining:
-        # Show next unlogged prayer as a quick-log button
         next_p = remaining[0]
         next_labels = {"fajr": "🌅 Fajr", "dhuhr": "🌤 Dhuhr", "asr": "🌇 Asr",
                        "maghrib": "🌆 Maghrib", "isha": "🌙 Isha"}
@@ -78,7 +88,6 @@ def after_prayer_kb(prayer_key: str, logged_prayers: set, ramadan: bool = False)
             callback_data=f"praymenu:{next_p}"
         )])
 
-    # Ramadan: after Maghrib, offer to log the fast
     if ramadan and prayer_key == "maghrib" and "fast" not in logged_prayers:
         rows.append([InlineKeyboardButton(
             "🌙 Log today's fast (+4 pts)", callback_data="deed:fast:4"
@@ -88,7 +97,7 @@ def after_prayer_kb(prayer_key: str, logged_prayers: set, ramadan: bool = False)
         InlineKeyboardButton("🕌 All prayers", callback_data="view:prayers"),
         InlineKeyboardButton("📊 Today",       callback_data="view:today"),
     ])
-    rows.append([InlineKeyboardButton("🏠 Home", callback_data="view:home")])
+    rows.append(_nav_row())
     return InlineKeyboardMarkup(rows)
 
 
@@ -113,7 +122,7 @@ def add_goal_kb(existing_keys: set = None) -> InlineKeyboardMarkup:
                 f"➕ {label} (+{pts} pts)", callback_data=f"addgoal:{key}:{pts}:{label}"
             )])
     rows.append([InlineKeyboardButton("✅ Done", callback_data="view:goals")])
-    rows.append([InlineKeyboardButton("🏠 Home", callback_data="view:home")])
+    rows.append(_nav_row())
     return InlineKeyboardMarkup(rows)
 
 
@@ -162,7 +171,7 @@ def settings_kb(gender: str = "unset", period_active: bool = False) -> InlineKey
         [InlineKeyboardButton("🔗 Join a group",       callback_data="settings:joingroup")],
         [InlineKeyboardButton("🔄 Reset progress",     callback_data="settings:reset")],
         [InlineKeyboardButton("🧪 Test Alerts (temp)", callback_data="settings:test_alerts")],
-        [InlineKeyboardButton("🏠 Home",               callback_data="view:home")],
+        _nav_row(),
     ]
     if gender == "female":
         if period_active:
@@ -188,8 +197,9 @@ def report_nav_kb() -> InlineKeyboardMarkup:
         ],
         [
             InlineKeyboardButton("👤 Profile",   callback_data="view:profile"),
-            InlineKeyboardButton("🏠 Home",      callback_data="view:home"),
+            InlineKeyboardButton("📊 Today",     callback_data="view:today"),
         ],
+        _nav_row(),
     ])
 
 
@@ -197,4 +207,5 @@ def challenge_kb(challenge_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("✅ Accept challenge", callback_data=f"challenge:accept:{challenge_id}")],
         [InlineKeyboardButton("⏭ Skip this week",   callback_data=f"challenge:skip:{challenge_id}")],
+        _nav_row(),
     ])
