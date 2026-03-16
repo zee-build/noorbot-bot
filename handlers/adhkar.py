@@ -18,7 +18,8 @@ logger = logging.getLogger(__name__)
 ADHKAR_SESSIONS = {}
 
 
-def _adhkar_card(dhikr: dict, index: int, total: int, collection_key: str) -> tuple[str, InlineKeyboardMarkup]:
+def _adhkar_card(dhikr: dict, index: int, total: int, collection_key: str,
+                  col_audio_url: str = None) -> tuple[str, InlineKeyboardMarkup]:
     """Returns (text, keyboard) for a single dhikr card."""
     progress_bar = "●" * (index + 1) + "○" * (total - index - 1)
     count_txt = f"×{dhikr['count']}" if dhikr['count'] > 1 else ""
@@ -44,7 +45,12 @@ def _adhkar_card(dhikr: dict, index: int, total: int, collection_key: str) -> tu
             InlineKeyboardButton("❌ Stop",        callback_data=f"adhkar:stop:{collection_key}"),
         ],
     ]
-    if dhikr.get("audio_url"):
+    if col_audio_url:
+        rows.append([InlineKeyboardButton(
+            "🎵 Full Collection Audio",
+            callback_data=f"adhkar:audio_col:{collection_key}"
+        )])
+    elif dhikr.get("audio_url"):
         rows.append([InlineKeyboardButton(
             "🔊 Listen to Recitation",
             callback_data=f"adhkar:audio:{collection_key}:{index}"
@@ -174,7 +180,20 @@ async def handle_adhkar_callback(update: Update, context: ContextTypes.DEFAULT_T
     adhkar_list = col["data"]
     total       = len(adhkar_list)
 
-    # ── Audio ──────────────────────────────────────────────
+    # ── Audio (collection-level) ───────────────────────────
+    if action == "audio_col":
+        col_audio_url = col.get("audio_url")
+        if col_audio_url:
+            await context.bot.send_audio(
+                chat_id=query.message.chat_id,
+                audio=col_audio_url,
+                title=col["label"],
+                caption=f"🎵 *{col['label']}* — full recitation",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+        return
+
+    # ── Audio (per-item) ───────────────────────────────────
     if action == "audio":
         index = int(parts[3])
         dhikr = adhkar_list[index]
@@ -194,7 +213,7 @@ async def handle_adhkar_callback(update: Update, context: ContextTypes.DEFAULT_T
         index = int(parts[3]) if len(parts) > 3 else 0
         ADHKAR_SESSIONS[user_id] = {"collection": col_key, "index": index}
         dhikr = adhkar_list[index]
-        text, kb = _adhkar_card(dhikr, index, total, col_key)
+        text, kb = _adhkar_card(dhikr, index, total, col_key, col.get("audio_url"))
         await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=kb)
 
     # ── Next / Done ────────────────────────────────────────
@@ -232,7 +251,7 @@ async def handle_adhkar_callback(update: Update, context: ContextTypes.DEFAULT_T
             # Show next dhikr
             ADHKAR_SESSIONS[user_id] = {"collection": col_key, "index": next_index}
             dhikr = adhkar_list[next_index]
-            text, kb = _adhkar_card(dhikr, next_index, total, col_key)
+            text, kb = _adhkar_card(dhikr, next_index, total, col_key, col.get("audio_url"))
             await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=kb)
 
     # ── Skip ───────────────────────────────────────────────
@@ -252,7 +271,7 @@ async def handle_adhkar_callback(update: Update, context: ContextTypes.DEFAULT_T
         else:
             ADHKAR_SESSIONS[user_id] = {"collection": col_key, "index": next_index}
             dhikr = adhkar_list[next_index]
-            text, kb = _adhkar_card(dhikr, next_index, total, col_key)
+            text, kb = _adhkar_card(dhikr, next_index, total, col_key, col.get("audio_url"))
             await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=kb)
 
     # ── Stop ───────────────────────────────────────────────
