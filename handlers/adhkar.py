@@ -187,28 +187,18 @@ async def handle_adhkar_callback(update: Update, context: ContextTypes.DEFAULT_T
             return
         chat_id = query.message.chat_id
         try:
-            import asyncio, urllib.request, io
-            from telegram import InputFile
-
-            def _fetch(url):
-                with urllib.request.urlopen(url, timeout=60) as resp:
-                    return resp.read()
-
-            data_bytes = await asyncio.to_thread(_fetch, col_audio_url)
-            buf = io.BytesIO(data_bytes)
-            buf.name = col_audio_url.split("/")[-1]
             await context.bot.send_audio(
                 chat_id=chat_id,
-                audio=InputFile(buf),
+                audio=col_audio_url,
                 title=col["label"],
                 caption=f"🎵 *{col['label']}* — full recitation",
                 parse_mode=ParseMode.MARKDOWN,
             )
         except Exception as e:
-            logger.warning(f"audio_col send failed: {e}")
+            logger.error(f"audio_col send failed ({col_audio_url}): {e}")
             await context.bot.send_message(
                 chat_id=chat_id,
-                text="⚠️ Could not load audio right now. Please try again shortly.",
+                text="⚠️ Could not send audio right now. Please try again shortly.",
             )
         return
 
@@ -219,25 +209,15 @@ async def handle_adhkar_callback(update: Update, context: ContextTypes.DEFAULT_T
         audio_url = dhikr.get("audio_url")
         if audio_url:
             try:
-                import asyncio, urllib.request, io
-                from telegram import InputFile
-
-                def _fetch(url):
-                    with urllib.request.urlopen(url, timeout=30) as resp:
-                        return resp.read()
-
-                data_bytes = await asyncio.to_thread(_fetch, audio_url)
-                buf = io.BytesIO(data_bytes)
-                buf.name = audio_url.split("/")[-1]
                 await context.bot.send_audio(
                     chat_id=query.message.chat_id,
-                    audio=InputFile(buf),
+                    audio=audio_url,
                     title=dhikr["title"],
                     caption=f"📿 *{dhikr['title']}*",
                     parse_mode=ParseMode.MARKDOWN,
                 )
             except Exception as e:
-                logger.warning(f"audio send failed: {e}")
+                logger.error(f"audio send failed ({audio_url}): {e}")
         return
 
     # ── Start ──────────────────────────────────────────────
