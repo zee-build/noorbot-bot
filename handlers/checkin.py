@@ -437,18 +437,19 @@ async def _handle_callback_inner(query, data, user_id, chat_id, context):
             )
         elif action == "test_alerts":
             await query.edit_message_text(
-                "🧪 *Sending all test alerts...*\n\nCheck the chat for each one.",
+                "🧪 *Sending test alerts to you only...*\n\nCheck the chat for each one.",
                 parse_mode=ParseMode.MARKDOWN
             )
             from handlers.reminders import (
                 _send_reminder, _send_missed_followup,
-                send_morning_content, send_evening_adhkar_reminder, send_sleep_adhkar_reminder,
-                send_weekly_challenge,
-                send_friday_morning, send_friday_jumua, send_friday_asr_dua,
+                send_morning_adhkar_prompt_single, send_evening_adhkar_prompt_single,
+                send_sleep_adhkar_prompt_single, send_weekly_challenge_single,
+                send_friday_morning_single, send_friday_jumua_single, send_friday_asr_dua_single,
             )
             from utils.prayer_times import get_prayer_times
+            from config import MORNING_CONTENT, WEEKLY_CHALLENGES
+            import random
             from datetime import date
-            import unittest.mock as mock
             db_user = await get_user(user_id)
             times = await get_prayer_times(db_user["latitude"], db_user["longitude"])
             bot = context.bot
@@ -458,22 +459,29 @@ async def _handle_callback_inner(query, data, user_id, chat_id, context):
                 await _send_reminder(bot, chat_id, "fajr", times.get("fajr", "05:30"), db_user["city"])
             # Missed prayer follow-up (Asr)
             await _send_missed_followup(bot, chat_id, "asr")
-            # Morning content
-            await send_morning_content(bot)
+            # Morning content + adhkar
+            today = date.today()
+            content = MORNING_CONTENT[today.toordinal() % len(MORNING_CONTENT)]
+            await bot.send_message(
+                chat_id=chat_id,
+                text=(
+                    f"🌅 *{today.strftime('%A, %d %B')}*\n\n"
+                    f"*Hadith of the Day:*\n_{content['hadith']}_\n"
+                    f"📚 _{content['source']}_"
+                ),
+                parse_mode=ParseMode.MARKDOWN
+            )
+            await send_morning_adhkar_prompt_single(bot, chat_id)
             # Evening adhkar
-            await send_evening_adhkar_reminder(bot)
+            await send_evening_adhkar_prompt_single(bot, chat_id)
             # Sleep adhkar
-            await send_sleep_adhkar_reminder(bot)
+            await send_sleep_adhkar_prompt_single(bot, chat_id)
             # Weekly challenge
-            await send_weekly_challenge(bot)
-            # Friday alerts — patch date so weekday check passes
-            friday = date(2026, 3, 21)  # a Friday
-            with mock.patch("handlers.reminders.date") as mock_date:
-                mock_date.today.return_value = friday
-                mock_date.side_effect = lambda *a, **kw: date(*a, **kw)
-                await send_friday_morning(bot)
-                await send_friday_jumua(bot)
-                await send_friday_asr_dua(bot)
+            await send_weekly_challenge_single(bot, chat_id)
+            # Friday alerts
+            await send_friday_morning_single(bot, chat_id)
+            await send_friday_jumua_single(bot, chat_id)
+            await send_friday_asr_dua_single(bot, chat_id)
 
     # ── Challenge actions ─────────────────────────────────
     elif data.startswith("challenge:"):

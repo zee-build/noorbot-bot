@@ -347,6 +347,89 @@ async def send_friday_asr_dua(bot: Bot):
             logger.error(f"Friday Asr duʿa error {user['user_id']}: {e}")
 
 
+# ── Single-user versions for test alerts ──────────────────
+
+async def send_morning_adhkar_prompt_single(bot: Bot, chat_id: int):
+    from handlers.adhkar import send_morning_adhkar_prompt
+    await send_morning_adhkar_prompt(bot, chat_id)
+
+async def send_evening_adhkar_prompt_single(bot: Bot, chat_id: int):
+    from handlers.adhkar import send_evening_adhkar_prompt
+    await send_evening_adhkar_prompt(bot, chat_id)
+
+async def send_sleep_adhkar_prompt_single(bot: Bot, chat_id: int):
+    from handlers.adhkar import send_sleep_adhkar_prompt
+    await send_sleep_adhkar_prompt(bot, chat_id)
+
+async def send_weekly_challenge_single(bot: Bot, chat_id: int):
+    import random
+    from config import WEEKLY_CHALLENGES
+    from utils.keyboards import challenge_kb
+    challenge = random.choice(WEEKLY_CHALLENGES)
+    await bot.send_message(
+        chat_id=chat_id,
+        text=(
+            f"🎯 *Weekly Challenge!*\n\n"
+            f"*{challenge['title']}*\n\n"
+            f"_{challenge['description']}_\n\n"
+            f"🏆 Reward: *+{challenge['xp_reward']} XP*\n\n"
+            "Accept the challenge and make this week count! 💪"
+        ),
+        parse_mode=ParseMode.MARKDOWN,
+        reply_markup=challenge_kb(challenge["id"])
+    )
+
+async def send_friday_morning_single(bot: Bot, chat_id: int):
+    await bot.send_message(
+        chat_id=chat_id,
+        text=(
+            "🌿 *Jumu'ah Mubarak!*\n\n"
+            "*Start your Friday well:*\n"
+            "• Perform ghusl and wear your best, clean clothes\n"
+            "• Apply perfume (for men)\n"
+            "• Remember — Friday is a blessed day 🤍\n\n"
+            "*During the day:*\n"
+            "• Read Surah Al-Kahf\n"
+            "• Increase salawat upon the Prophet ﷺ\n"
+            "• Make duʿa frequently and remember Allah throughout\n\n"
+            "_'The best day on which the sun has risen is Friday.'_ — Muslim"
+        ),
+        parse_mode=ParseMode.MARKDOWN
+    )
+
+async def send_friday_jumua_single(bot: Bot, chat_id: int):
+    await bot.send_message(
+        chat_id=chat_id,
+        text=(
+            "🕌 *Jumu'ah is soon!*\n\n"
+            "• Go to the masjid *early* — the earlier you arrive, the greater the reward\n"
+            "• Pray Tahiyyat al-Masjid when you enter\n"
+            "• Listen attentively to the khutbah\n\n"
+            "_'Whoever goes early to Jumu'ah is like one who offered a camel for Allah's sake.'_ — Bukhari\n\n"
+            "May Allah accept your Jumu'ah. 🤲"
+        ),
+        parse_mode=ParseMode.MARKDOWN
+    )
+
+async def send_friday_asr_dua_single(bot: Bot, chat_id: int):
+    await bot.send_message(
+        chat_id=chat_id,
+        text=(
+            "🤲 *Sa'at al-Istijabah — The Hour of Answered Duʿa*\n\n"
+            "After Asr until Maghrib is a special time on Friday when duʿa is accepted.\n\n"
+            "Increase your supplications now:\n"
+            "• Ask for forgiveness\n"
+            "• Ask for your needs in this life and the next\n"
+            "• Send salawat upon the Prophet ﷺ\n"
+            "• Do not leave this hour without making duʿa\n\n"
+            "_'On Friday there is a time when, if a Muslim stands and prays and asks Allah for something good, "
+            "He will give it to him.'_ — Bukhari\n\n"
+            "May Allah fill our Friday with mercy and accept our duʿa. 🌿"
+        ),
+        parse_mode=ParseMode.MARKDOWN
+    )
+
+
 async def send_weekly_challenge(bot: Bot):
     """Sends a weekly challenge every Monday morning."""
     import random
