@@ -142,8 +142,8 @@ def main_menu_kb(has_webapp: bool = True) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(rows)
 
 
-def settings_kb() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
+def settings_kb(gender: str = "unset") -> InlineKeyboardMarkup:
+    rows = [
         [InlineKeyboardButton("📍 Change city",         callback_data="settings:city")],
         [InlineKeyboardButton("➕ Add Sunnah deed",     callback_data="settings:addgoal")],
         [InlineKeyboardButton("🔕 Pause reminders",    callback_data="settings:pause")],
@@ -151,10 +151,12 @@ def settings_kb() -> InlineKeyboardMarkup:
         [InlineKeyboardButton("👥 Create a group",     callback_data="settings:creategroup")],
         [InlineKeyboardButton("🔗 Join a group",       callback_data="settings:joingroup")],
         [InlineKeyboardButton("🔄 Reset progress",     callback_data="settings:reset")],
-        [InlineKeyboardButton("🌙 Pause Tracking",     callback_data="settings:periodmode")],
         [InlineKeyboardButton("🧪 Test Alerts (temp)", callback_data="settings:test_alerts")],
-        [InlineKeyboardButton("🏠 Home",          callback_data="view:home")],
-    ])
+        [InlineKeyboardButton("🏠 Home",               callback_data="view:home")],
+    ]
+    if gender == "female":
+        rows.insert(7, [InlineKeyboardButton("🌙 Pause Tracking", callback_data="settings:periodmode")])
+    return InlineKeyboardMarkup(rows)
 
 
 def reset_confirm_kb() -> InlineKeyboardMarkup:

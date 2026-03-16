@@ -130,6 +130,22 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN,
                                         reply_markup=main_menu_kb())
 
+    # Ask gender if not set
+    db_user = await get_user(user.id)
+    if not db_user or db_user.get("gender", "unset") == "unset":
+        from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+        gender_kb = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("👨 Male", callback_data="settings:gender_male"),
+                InlineKeyboardButton("👩 Female", callback_data="settings:gender_female"),
+            ]
+        ])
+        await update.message.reply_text(
+            "One quick question to personalise your experience:\n\n*Are you male or female?*\n\n_(This is kept private and only used to tailor features for you.)_",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=gender_kb
+        )
+
 
 async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = await build_home_page(update.effective_user.id)

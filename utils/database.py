@@ -165,6 +165,10 @@ async def init_db():
             except Exception:
                 pass
 
+        await conn.execute("""
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS gender TEXT DEFAULT 'unset'
+        """)
+
         # ── Deduplicate goals ──────────────────────────────────
         await conn.execute("""
             DELETE FROM goals WHERE id NOT IN (
@@ -520,3 +524,11 @@ async def get_group_leaderboard(group_id: int, period_start: str) -> list:
         ORDER BY points DESC
     """, period_start, group_id)
     return [dict(r) for r in rows]
+
+
+async def set_user_gender(user_id: int, gender: str):
+    await pool.execute("UPDATE users SET gender=$1 WHERE user_id=$2", gender, user_id)
+
+async def get_user_gender(user_id: int) -> str:
+    row = await pool.fetchrow("SELECT gender FROM users WHERE user_id=$1", user_id)
+    return row["gender"] if row else "unset"

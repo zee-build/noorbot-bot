@@ -254,7 +254,7 @@ async def _handle_callback_inner(query, data, user_id, chat_id, context):
             state = "🔔 On" if db_user["reminders_on"] else "🔕 Off"
             await query.edit_message_text(
                 f"⚙️ *Settings*\n\n📍 City: *{db_user['city']}*\n🔔 Reminders: *{state}*\n\nWhat to change?",
-                parse_mode=ParseMode.MARKDOWN, reply_markup=settings_kb()
+                parse_mode=ParseMode.MARKDOWN, reply_markup=settings_kb(gender=db_user.get("gender", "unset"))
             )
         elif view == "prayers":
             logs = await get_today_logs(user_id)
@@ -356,6 +356,16 @@ async def _handle_callback_inner(query, data, user_id, chat_id, context):
                     "_Type a number between 1 and 10_",
                     parse_mode=ParseMode.MARKDOWN
                 )
+
+        elif action == "gender_male":
+            from utils.database import set_user_gender
+            await set_user_gender(user_id, "male")
+            await query.edit_message_text("✅ Got it! Your profile has been updated.", parse_mode=ParseMode.MARKDOWN)
+
+        elif action == "gender_female":
+            from utils.database import set_user_gender
+            await set_user_gender(user_id, "female")
+            await query.edit_message_text("✅ Got it! Your profile has been updated.", parse_mode=ParseMode.MARKDOWN)
 
         elif action == "reset_confirm":
             await reset_progress(user_id)
