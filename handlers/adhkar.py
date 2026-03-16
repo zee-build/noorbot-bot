@@ -34,7 +34,7 @@ def _adhkar_card(dhikr: dict, index: int, total: int, collection_key: str) -> tu
     )
 
     is_last = (index == total - 1)
-    kb = InlineKeyboardMarkup([
+    rows = [
         [InlineKeyboardButton(
             "✅ Done — Next ›" if not is_last else "✅ Completed! Log it",
             callback_data=f"adhkar:next:{collection_key}:{index}"
@@ -43,8 +43,30 @@ def _adhkar_card(dhikr: dict, index: int, total: int, collection_key: str) -> tu
             InlineKeyboardButton("⏭ Skip this",   callback_data=f"adhkar:skip:{collection_key}:{index}"),
             InlineKeyboardButton("❌ Stop",        callback_data=f"adhkar:stop:{collection_key}"),
         ],
+    ]
+    if dhikr.get("audio_url"):
+        rows.append([InlineKeyboardButton(
+            "🔊 Listen to Recitation",
+            callback_data=f"adhkar:audio:{collection_key}:{index}"
+        )])
+    return text, InlineKeyboardMarkup(rows)
+
+
+async def adhkar_menu_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handler for /adhkar command — shows all 4 collection buttons."""
+    text = (
+        "📿 *Adhkar Collections*\n\n"
+        "Choose a collection to begin reciting:\n\n"
+        "_Adhkar are the remembrance of Allah — they purify the heart,\n"
+        "protect you through the day, and bring immense reward._ 🤲"
+    )
+    kb = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🌅 Morning Adhkar",    callback_data="adhkar:start:dhikr_am:0")],
+        [InlineKeyboardButton("🌆 Evening Adhkar",    callback_data="adhkar:start:dhikr_pm:0")],
+        [InlineKeyboardButton("📿 Dhikr after Salah", callback_data="adhkar:start:dhikr:0")],
+        [InlineKeyboardButton("🌙 Sleep Adhkar",      callback_data="adhkar:start:dhikr_nawm:0")],
     ])
-    return text, kb
+    await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=kb)
 
 
 def _completion_text(collection_key: str, xp_earned: int, new_level: int, total_xp: int) -> str:
@@ -125,15 +147,47 @@ async def handle_adhkar_callback(update: Update, context: ContextTypes.DEFAULT_T
     data    = query.data          # adhkar:<action>:<collection>:<index>
     parts   = data.split(":")
     action  = parts[1]
-    col_key = parts[2]
     user_id = query.from_user.id
 
+    # ── Menu ───────────────────────────────────────────────
+    if action == "menu":
+        text = (
+            "📿 *Adhkar Collections*\n\n"
+            "Choose a collection to begin reciting:\n\n"
+            "_Adhkar are the remembrance of Allah — they purify the heart,\n"
+            "protect you through the day, and bring immense reward._ 🤲"
+        )
+        kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🌅 Morning Adhkar",    callback_data="adhkar:start:dhikr_am:0")],
+            [InlineKeyboardButton("🌆 Evening Adhkar",    callback_data="adhkar:start:dhikr_pm:0")],
+            [InlineKeyboardButton("📿 Dhikr after Salah", callback_data="adhkar:start:dhikr:0")],
+            [InlineKeyboardButton("🌙 Sleep Adhkar",      callback_data="adhkar:start:dhikr_nawm:0")],
+        ])
+        await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=kb)
+        return
+
+    col_key = parts[2] if len(parts) > 2 else None
     col = ADHKAR_COLLECTIONS.get(col_key)
     if not col:
         return
 
     adhkar_list = col["data"]
     total       = len(adhkar_list)
+
+    # ── Audio ──────────────────────────────────────────────
+    if action == "audio":
+        index = int(parts[3])
+        dhikr = adhkar_list[index]
+        audio_url = dhikr.get("audio_url")
+        if audio_url:
+            await context.bot.send_audio(
+                chat_id=query.message.chat_id,
+                audio=audio_url,
+                title=dhikr["title"],
+                caption=f"📿 *{dhikr['title']}*",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+        return
 
     # ── Start ──────────────────────────────────────────────
     if action == "start":

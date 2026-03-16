@@ -133,6 +133,9 @@ def main_menu_kb(has_webapp: bool = True) -> InlineKeyboardMarkup:
             InlineKeyboardButton("👤 Profile",  callback_data="view:profile"),
             InlineKeyboardButton("⚙️ Settings", callback_data="view:settings"),
         ],
+        [
+            InlineKeyboardButton("📿 Adhkar", callback_data="adhkar:menu"),
+        ],
     ]
     if has_webapp and WEBAPP_URL:
         rows.append([InlineKeyboardButton(

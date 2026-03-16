@@ -208,8 +208,9 @@ def main():
     app.add_handler(CommandHandler("pause_user",  pause_user_cmd))
     app.add_handler(CommandHandler("resume_user", resume_user_cmd))
 
-    # Callbacks — adhkar prefix first (more specific), then general
-    from handlers.adhkar import handle_adhkar_callback
+    # Adhkar command + callbacks
+    from handlers.adhkar import handle_adhkar_callback, adhkar_menu_cmd
+    app.add_handler(CommandHandler("adhkar", adhkar_menu_cmd))
     app.add_handler(CallbackQueryHandler(handle_adhkar_callback, pattern="^adhkar:"))
     app.add_handler(CallbackQueryHandler(handle_callback))
 
