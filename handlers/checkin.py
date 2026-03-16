@@ -443,9 +443,12 @@ async def _handle_callback_inner(query, data, user_id, chat_id, context):
             from handlers.reminders import (
                 _send_reminder, _send_missed_followup,
                 send_morning_content, send_evening_adhkar_reminder, send_sleep_adhkar_reminder,
-                send_weekly_challenge
+                send_weekly_challenge,
+                send_friday_morning, send_friday_jumua, send_friday_asr_dua,
             )
             from utils.prayer_times import get_prayer_times
+            from datetime import date
+            import unittest.mock as mock
             db_user = await get_user(user_id)
             times = await get_prayer_times(db_user["latitude"], db_user["longitude"])
             bot = context.bot
@@ -463,6 +466,14 @@ async def _handle_callback_inner(query, data, user_id, chat_id, context):
             await send_sleep_adhkar_reminder(bot)
             # Weekly challenge
             await send_weekly_challenge(bot)
+            # Friday alerts — patch date so weekday check passes
+            friday = date(2026, 3, 21)  # a Friday
+            with mock.patch("handlers.reminders.date") as mock_date:
+                mock_date.today.return_value = friday
+                mock_date.side_effect = lambda *a, **kw: date(*a, **kw)
+                await send_friday_morning(bot)
+                await send_friday_jumua(bot)
+                await send_friday_asr_dua(bot)
 
     # ── Challenge actions ─────────────────────────────────
     elif data.startswith("challenge:"):
