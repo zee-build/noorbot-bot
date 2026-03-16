@@ -23,6 +23,14 @@ from utils.keyboards import (
 from handlers.reports import build_daily_report, build_weekly_report, build_monthly_report
 from config import POINTS, LEVEL_MILESTONES, xp_progress
 
+
+async def _settings_kb_for(user_id: int):
+    """Build settings keyboard with correct gender + period toggle state."""
+    db_user = await get_user(user_id)
+    gender = db_user.get("gender", "unset") if db_user else "unset"
+    period_active = await is_period_mode(user_id) if gender == "female" else False
+    return settings_kb(gender=gender, period_active=period_active)
+
 logger = logging.getLogger(__name__)
 
 PRAYER_LABELS = {"fajr":"Fajr","dhuhr":"Dhuhr","asr":"Asr","maghrib":"Maghrib","isha":"Isha"}
@@ -252,9 +260,13 @@ async def _handle_callback_inner(query, data, user_id, chat_id, context):
         elif view == "settings":
             db_user = await get_user(user_id)
             state = "🔔 On" if db_user["reminders_on"] else "🔕 Off"
+            gender = db_user.get("gender", "unset")
+            period_active = await is_period_mode(user_id) if gender == "female" else False
+            period_line = f"\n🌙 Period Mode: *{'ON' if period_active else 'OFF'}*" if gender == "female" else ""
             await query.edit_message_text(
-                f"⚙️ *Settings*\n\n📍 City: *{db_user['city']}*\n🔔 Reminders: *{state}*\n\nWhat to change?",
-                parse_mode=ParseMode.MARKDOWN, reply_markup=settings_kb(gender=db_user.get("gender", "unset"))
+                f"⚙️ *Settings*\n\n📍 City: *{db_user['city']}*\n🔔 Reminders: *{state}*{period_line}\n\nWhat to change?",
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=settings_kb(gender=gender, period_active=period_active)
             )
         elif view == "prayers":
             logs = await get_today_logs(user_id)
@@ -477,7 +489,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"❌ I couldn't find *{text}*.\n\n"
                 "Try a different spelling, e.g. _Abu Dhabi_, _Dubai_, _London_, _Karachi_.",
                 parse_mode=ParseMode.MARKDOWN,
-                reply_markup=settings_kb()
+                reply_markup=await _settings_kb_for(user_id)
             )
             return
         await update_user_location(user_id, result["city"], result["country"], result["lat"], result["lng"])
@@ -509,7 +521,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except ValueError:
             await update.message.reply_text(
                 "Please enter a number between 1 and 10.",
-                reply_markup=settings_kb()
+                reply_markup=await _settings_kb_for(user_id)
             )
             return
         await set_period_mode(user_id, days)
@@ -533,7 +545,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(
                 f"❌ Code *{code}* not found.\n\nDouble-check the code and try again.",
                 parse_mode=ParseMode.MARKDOWN,
-                reply_markup=settings_kb()
+                reply_markup=await _settings_kb_for(user_id)
             )
         else:
             await update.message.reply_text(

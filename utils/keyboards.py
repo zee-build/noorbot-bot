@@ -145,7 +145,7 @@ def main_menu_kb(has_webapp: bool = True) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(rows)
 
 
-def settings_kb(gender: str = "unset") -> InlineKeyboardMarkup:
+def settings_kb(gender: str = "unset", period_active: bool = False) -> InlineKeyboardMarkup:
     rows = [
         [InlineKeyboardButton("📍 Change city",         callback_data="settings:city")],
         [InlineKeyboardButton("➕ Add Sunnah deed",     callback_data="settings:addgoal")],
@@ -158,7 +158,11 @@ def settings_kb(gender: str = "unset") -> InlineKeyboardMarkup:
         [InlineKeyboardButton("🏠 Home",               callback_data="view:home")],
     ]
     if gender == "female":
-        rows.insert(7, [InlineKeyboardButton("🌙 Pause Tracking", callback_data="settings:periodmode")])
+        if period_active:
+            label = "🟢 Period Mode: ON  —  Tap to turn off"
+        else:
+            label = "🌙 Period Mode: OFF  —  Tap to turn on"
+        rows.insert(7, [InlineKeyboardButton(label, callback_data="settings:periodmode")])
     return InlineKeyboardMarkup(rows)
 
 

@@ -222,15 +222,24 @@ async def monthly(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def settings_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    db_user = await get_user(update.effective_user.id)
+    from utils.database import is_period_mode
+    user_id = update.effective_user.id
+    db_user = await get_user(user_id)
     reminder_state = "🔔 On" if db_user["reminders_on"] else "🔕 Off"
+    gender = db_user.get("gender", "unset")
+    period_active = await is_period_mode(user_id) if gender == "female" else False
+    period_line = f"\n🌙 Period Mode: *{'ON' if period_active else 'OFF'}*" if gender == "female" else ""
     text = (
         f"⚙️ *Settings*\n\n"
         f"📍 City: *{db_user['city']}*\n"
-        f"🔔 Reminders: *{reminder_state}*\n\n"
+        f"🔔 Reminders: *{reminder_state}*"
+        f"{period_line}\n\n"
         "What would you like to change?"
     )
-    await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=settings_kb())
+    await update.message.reply_text(
+        text, parse_mode=ParseMode.MARKDOWN,
+        reply_markup=settings_kb(gender=gender, period_active=period_active)
+    )
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
