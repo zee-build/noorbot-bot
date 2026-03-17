@@ -81,8 +81,16 @@ def minutes_since_prayer(prayer_time_str: str, tz_name: str = TIMEZONE) -> int:
     return -minutes_until_prayer(prayer_time_str, tz_name)
 
 
+def to_12h(time_str: str) -> str:
+    """Convert 'HH:MM' (24h) to '5:30 AM' (12h) format."""
+    h, m = map(int, time_str.split(":"))
+    period = "AM" if h < 12 else "PM"
+    h12 = h % 12 or 12
+    return f"{h12}:{m:02d} {period}"
+
+
 def format_prayer_schedule(times: dict, city: str = "") -> str:
     lines = [f"📅 *Prayer Times{' — ' + city if city else ''}*\n"]
     for key in PRAYER_KEYS:
-        lines.append(f"{PRAYER_EMOJIS[key]} *{PRAYER_NAMES[key]}*: `{times[key]}`")
+        lines.append(f"{PRAYER_EMOJIS[key]} *{PRAYER_NAMES[key]}*: `{to_12h(times[key])}`")
     return "\n".join(lines)

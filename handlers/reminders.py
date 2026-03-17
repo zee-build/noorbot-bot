@@ -15,7 +15,7 @@ from utils.database import (
 )
 from utils.prayer_times import (
     get_prayer_times, minutes_until_prayer, minutes_since_prayer,
-    PRAYER_KEYS, PRAYER_EMOJIS, PRAYER_NAMES
+    PRAYER_KEYS, PRAYER_EMOJIS, PRAYER_NAMES, to_12h
 )
 from utils.keyboards import prayer_checkin_kb, missed_followup_kb
 from config import REMINDER_MINUTES, MORNING_CONTENT, WEEKLY_CHALLENGES
@@ -131,7 +131,7 @@ async def _send_reminder(bot: Bot, chat_id: int, key: str, prayer_time: str, cit
 
     text = (
         f"{emoji} *{name} in {REMINDER_MINUTES} minutes*\n\n"
-        f"🕐 *{prayer_time}* in {city}\n\n"
+        f"🕐 *{to_12h(prayer_time)}* in {city}\n\n"
         f"_{hadith}_\n\n"
         f"🕌 Head to the masjid or prepare for salah now."
     )
@@ -240,7 +240,7 @@ async def send_ramadan_suhoor(bot: Bot):
                 chat_id=user["user_id"],
                 text=(
                     f"🌙 *Suhoor Time!*\n\n"
-                    f"Fajr is at *{fajr_time}* — eat & drink before then.\n\n"
+                    f"Fajr is at *{to_12h(fajr_time)}* — eat & drink before then.\n\n"
                     "_The Prophet ﷺ said: 'Have suhoor, for in suhoor there is blessing.'_ — Bukhari\n\n"
                     "May Allah accept your fast! 🤲"
                 ),
@@ -269,7 +269,7 @@ async def send_ramadan_iftar(bot: Bot):
             await bot.send_message(
                 chat_id=user["user_id"],
                 text=(
-                    f"🌅 *Iftar soon — Maghrib at {maghrib_time}!*\n\n"
+                    f"🌅 *Iftar soon — Maghrib at {to_12h(maghrib_time)}!*\n\n"
                     "Prepare your iftar. Don't forget the dua:\n\n"
                     "_اللَّهُمَّ لَكَ صُمْتُ وَعَلَى رِزْقِكَ أَفْطَرْتُ_\n"
                     "_O Allah! For You I fasted and upon Your provision I break my fast._\n\n"
