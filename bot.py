@@ -115,6 +115,12 @@ async def post_init(application: Application):
         CronTrigger(hour=0, minute=1, timezone=tz), id="period_check",
         misfire_grace_time=_grace, coalesce=True,
     )
+    # Daily prayer times — noon every day
+    scheduler.add_job(
+        lambda: _run(daily_prayer_times, application),
+        CronTrigger(hour=12, minute=0, timezone=tz), id="daily_prayer_times",
+        misfire_grace_time=_grace, coalesce=True,
+    )
     # Friday morning reminder — 7:00 AM every Friday
     scheduler.add_job(
         lambda: _run(friday_morning, application),
@@ -198,6 +204,10 @@ async def friday_jumua(app):
 async def friday_asr_dua(app):
     from handlers.reminders import send_friday_asr_dua
     await send_friday_asr_dua(app.bot)
+
+async def daily_prayer_times(app):
+    from handlers.reminders import send_daily_prayer_times
+    await send_daily_prayer_times(app.bot)
 
 async def check_period_expirations(app):
     from utils.database import get_users_period_ending_today, deactivate_period_mode

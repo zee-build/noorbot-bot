@@ -102,6 +102,13 @@ async def check_and_send_reminders(bot: Bot):
                         if sent:
                             await _send_missed_followup(bot, user["user_id"], key)
 
+                # ── Dhikr after salah — 10 minutes after prayer ──
+                if 9 <= mins_since <= 11:
+                    sent = await mark_reminder_sent(user["user_id"], f"dhikr_salah_{key}", today)
+                    if sent:
+                        from handlers.adhkar import send_after_salah_prompt
+                        await send_after_salah_prompt(bot, user["user_id"], PRAYER_NAMES[key])
+
             # ── Ramadan Tarawih — 20 minutes after Isha ──
             ramadan = await is_ramadan(user.get("latitude", 25.2048), user.get("longitude", 55.2708))
             if ramadan and "isha" in times:
@@ -473,3 +480,26 @@ async def send_weekly_challenge(bot: Bot):
             )
         except Exception as e:
             logger.error(f"Challenge send error {user['user_id']}: {e}")
+
+
+async def send_daily_prayer_times(bot: Bot):
+    """Sends each user their prayer schedule at noon."""
+    from utils.prayer_times import format_prayer_schedule
+    today = date.today().isoformat()
+    if not await mark_broadcast_sent("daily_prayer_times", today):
+        return
+    users = await get_all_active_users()
+    for user in users:
+        if not user.get("reminders_on", 1):
+            continue
+        try:
+            times = await get_prayer_times(user["latitude"], user["longitude"])
+            if not times:
+                continue
+            await bot.send_message(
+                chat_id=user["user_id"],
+                text=format_prayer_schedule(times, user.get("city", "")),
+                parse_mode=ParseMode.MARKDOWN,
+            )
+        except Exception as e:
+            logger.error(f"Daily prayer times error {user['user_id']}: {e}")
