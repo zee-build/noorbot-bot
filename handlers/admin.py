@@ -17,6 +17,11 @@ from utils.database import (
 logger = logging.getLogger(__name__)
 
 
+def _e(text) -> str:
+    """Escape HTML special characters in user-supplied strings."""
+    return str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
 def _is_admin(user_id: int) -> bool:
     if not ADMIN_CHAT_ID:
         logger.warning("ADMIN_CHAT_ID is not set — all admin commands will be denied.")
@@ -38,18 +43,18 @@ async def admin_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await _check_admin(update):
         return
     text = (
-        "🔐 *Admin Panel*\n\n"
+        "🔐 <b>Admin Panel</b>\n\n"
         "Available commands:\n"
-        "/stats\\_admin — Bot statistics\n"
+        "/stats_admin — Bot statistics\n"
         "/top10 — Top 10 users all time\n"
         "/broadcast — Send message to all users\n"
         "/users — List all active users\n"
         "/inactive — List blocked/inactive users\n"
-        "/user \\<id\\> — Get user info\n"
-        "/pause\\_user \\<id\\> — Pause user\n"
-        "/resume\\_user \\<id\\> — Resume user\n"
+        "/user &lt;id&gt; — Get user info\n"
+        "/pause_user &lt;id&gt; — Pause user\n"
+        "/resume_user &lt;id&gt; — Resume user\n"
     )
-    await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN_V2)
+    await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
 
 async def stats_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -73,14 +78,14 @@ async def stats_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ) or 0
 
     text = (
-        f"📊 *Bot Statistics*\n\n"
-        f"👥 Total users: *{total}*\n"
-        f"🆕 Joined today: *{new_today}*\n"
-        f"✅ Active today: *{active_today}*\n"
-        f"📅 Active this week: *{active_week}*\n"
-        f"📝 Total deed logs: *{total_logs:,}*\n"
+        f"📊 <b>Bot Statistics</b>\n\n"
+        f"👥 Total users: <b>{total}</b>\n"
+        f"🆕 Joined today: <b>{new_today}</b>\n"
+        f"✅ Active today: <b>{active_today}</b>\n"
+        f"📅 Active this week: <b>{active_week}</b>\n"
+        f"📝 Total deed logs: <b>{total_logs:,}</b>\n"
     )
-    await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
+    await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
 
 async def top10_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -98,13 +103,13 @@ async def top10_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """)
 
     medals = ["🥇","🥈","🥉"] + ["🏅"] * 7
-    lines = ["🏆 *Top 10 All-Time*\n"]
+    lines = ["🏆 <b>Top 10 All-Time</b>\n"]
     for i, r in enumerate(rows):
-        name = r["first_name"] or "Anonymous"
-        uname = f" (@{r['username']})" if r["username"] else ""
-        lines.append(f"{medals[i]} *{name}*{uname} — Lvl {r['level']} — {r['pts']} pts")
+        name = _e(r["first_name"] or "Anonymous")
+        uname = f" (@{_e(r['username'])})" if r["username"] else ""
+        lines.append(f"{medals[i]} <b>{name}</b>{uname} — Lvl {r['level']} — {r['pts']} pts")
 
-    await update.message.reply_text("\n".join(lines), parse_mode=ParseMode.MARKDOWN)
+    await update.message.reply_text("\n".join(lines), parse_mode=ParseMode.HTML)
 
 
 async def broadcast_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -193,19 +198,19 @@ async def user_info_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     status = "✅ Active" if user.get("active", 1) else "🚫 Paused"
     text = (
-        f"👤 *User Info*\n\n"
-        f"ID: `{user['user_id']}`\n"
-        f"Name: *{user['first_name']}*\n"
-        f"Username: @{user['username'] or 'N/A'}\n"
+        f"👤 <b>User Info</b>\n\n"
+        f"ID: <code>{user['user_id']}</code>\n"
+        f"Name: <b>{_e(user['first_name'])}</b>\n"
+        f"Username: @{_e(user['username'] or 'N/A')}\n"
         f"Status: {status}\n"
-        f"Level: *{user['level']}* | XP: *{user['total_xp']:,}*\n"
-        f"City: {user['city']}\n"
+        f"Level: <b>{user['level']}</b> | XP: <b>{user['total_xp']:,}</b>\n"
+        f"City: {_e(user['city'])}\n"
         f"Joined: {user['joined_at']}\n\n"
-        f"📝 Logs today: *{logs_today}*\n"
-        f"📅 Logs this week: *{logs_week}*\n"
-        f"🏆 Total pts: *{total_pts:,}*\n"
+        f"📝 Logs today: <b>{logs_today}</b>\n"
+        f"📅 Logs this week: <b>{logs_week}</b>\n"
+        f"🏆 Total pts: <b>{total_pts:,}</b>\n"
     )
-    await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
+    await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
 
 async def active_users_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -220,15 +225,15 @@ async def active_users_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("No active users found.")
         return
 
-    lines = [f"✅ *Active Users ({len(rows)})*\n"]
+    lines = [f"✅ <b>Active Users ({len(rows)})</b>\n"]
     for r in rows:
-        uname = f"@{r['username']}" if r["username"] else "no username"
-        lines.append(f"• `{r['user_id']}` — *{r['first_name']}* ({uname}) — Lvl {r['level']} — {r['city']} — joined {r['joined_at']}")
+        uname = f"@{_e(r['username'])}" if r["username"] else "no username"
+        lines.append(f"• <code>{r['user_id']}</code> — <b>{_e(r['first_name'])}</b> ({uname}) — Lvl {r['level']} — {_e(r['city'])} — joined {r['joined_at']}")
 
     # Telegram message limit is 4096 chars — split if needed
     text = "\n".join(lines)
     if len(text) <= 4096:
-        await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
+        await update.message.reply_text(text, parse_mode=ParseMode.HTML)
     else:
         chunk, chunks = [], []
         for line in lines:
@@ -239,7 +244,7 @@ async def active_users_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if chunk:
             chunks.append("\n".join(chunk))
         for part in chunks:
-            await update.message.reply_text(part, parse_mode=ParseMode.MARKDOWN)
+            await update.message.reply_text(part, parse_mode=ParseMode.HTML)
 
 
 async def inactive_users_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -254,12 +259,12 @@ async def inactive_users_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text("✅ No inactive users.")
         return
 
-    lines = [f"🚫 *Inactive Users ({len(rows)})*\n"]
+    lines = [f"🚫 <b>Inactive Users ({len(rows)})</b>\n"]
     for r in rows:
-        uname = f"@{r['username']}" if r["username"] else "no username"
-        lines.append(f"• `{r['user_id']}` — *{r['first_name']}* ({uname}) — joined {r['joined_at']}")
+        uname = f"@{_e(r['username'])}" if r["username"] else "no username"
+        lines.append(f"• <code>{r['user_id']}</code> — <b>{_e(r['first_name'])}</b> ({uname}) — joined {r['joined_at']}")
 
-    await update.message.reply_text("\n".join(lines), parse_mode=ParseMode.MARKDOWN)
+    await update.message.reply_text("\n".join(lines), parse_mode=ParseMode.HTML)
 
 
 async def pause_user_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -310,12 +315,12 @@ async def notify_admin_new_user(bot, user_id: int, first_name: str, username: st
         await bot.send_message(
             chat_id=ADMIN_CHAT_ID,
             text=(
-                f"🆕 *New User Joined!*\n\n"
-                f"👤 {first_name} ({uname})\n"
-                f"🆔 `{user_id}`\n\n"
-                f"👥 Total users: *{total}*"
+                f"🆕 <b>New User Joined!</b>\n\n"
+                f"👤 {_e(first_name)} ({_e(uname)})\n"
+                f"🆔 <code>{user_id}</code>\n\n"
+                f"👥 Total users: <b>{total}</b>"
             ),
-            parse_mode=ParseMode.MARKDOWN
+            parse_mode=ParseMode.HTML
         )
     except Exception as e:
         logger.error(f"Failed to notify admin of new user: {e}")
