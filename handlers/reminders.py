@@ -92,9 +92,9 @@ async def check_and_send_reminders(bot: Bot):
                     if sent:
                         await _send_reminder(bot, user["user_id"], key, times[key], user["city"])
 
-                # ── Missed follow-up (45 min after prayer time, not yet logged) ──
+                # ── Missed follow-up (30–90 min after prayer, not yet logged) ──
                 mins_since = minutes_since_prayer(times[key], tz)
-                if 44 <= mins_since <= 46:
+                if 30 <= mins_since <= 90:
                     logs = await get_today_logs(user["user_id"])
                     logged = {l["deed_key"] for l in logs}
                     if key not in logged:
@@ -102,8 +102,8 @@ async def check_and_send_reminders(bot: Bot):
                         if sent:
                             await _send_missed_followup(bot, user["user_id"], key)
 
-                # ── Dhikr after salah — 10 minutes after prayer ──
-                if 9 <= mins_since <= 11:
+                # ── Dhikr after salah — 10–20 minutes after prayer ──
+                if 9 <= mins_since <= 20:
                     sent = await mark_reminder_sent(user["user_id"], f"dhikr_salah_{key}", today)
                     if sent:
                         from handlers.adhkar import send_after_salah_prompt
