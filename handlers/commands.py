@@ -7,7 +7,6 @@ from telegram import Update
 from telegram.ext import ContextTypes
 from telegram.constants import ParseMode
 
-from datetime import date
 from utils.database import (
     upsert_user, get_user, get_user_goals, add_default_goals,
     get_streak, get_user_groups, get_today_logs

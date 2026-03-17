@@ -132,7 +132,11 @@ async def _handle_callback_inner(query, data, user_id, chat_id, context):
             if remaining_deeds:
                 text += f"📿 *Deeds left:* {', '.join(g['deed_label'] for g in remaining_deeds[:3])}"
 
-        ramadan = await is_ramadan()
+        db_user = await get_user(user_id)
+        ramadan = await is_ramadan(
+            db_user.get("latitude", 25.2048) if db_user else 25.2048,
+            db_user.get("longitude", 55.2708) if db_user else 55.2708,
+        )
         kb = after_prayer_kb(prayer_key, logged_prayers, ramadan)
         await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=kb)
 
