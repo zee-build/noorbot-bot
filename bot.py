@@ -55,7 +55,7 @@ async def post_init(application: Application):
 
     scheduler.add_job(
         lambda: _run(send_daily_reports, application),
-        CronTrigger(hour=22, minute=30, timezone=tz), id="daily_reports",
+        CronTrigger(hour=0, minute=0, timezone=tz), id="daily_reports",
         misfire_grace_time=_grace, coalesce=True,
     )
     scheduler.add_job(

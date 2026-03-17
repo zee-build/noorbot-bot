@@ -161,14 +161,15 @@ async def build_monthly_report(user_id: int) -> str:
 
 
 async def send_all_daily_reports(bot: Bot):
-    today = date.today().isoformat()
-    if not await mark_broadcast_sent("daily_reports", today):
+    # Sent at midnight — report covers the day that just ended (yesterday)
+    yesterday = (date.today() - timedelta(days=1)).isoformat()
+    if not await mark_broadcast_sent("daily_reports", yesterday):
         return
     for user in await get_all_active_users():
         if not user.get("reminders_on", 1):
             continue
         try:
-            text = "🌙 *End of Day Report*\n\n" + await build_daily_report(user["user_id"])
+            text = "🌙 *End of Day Report*\n\n" + await build_daily_report(user["user_id"], for_date=yesterday)
             await bot.send_message(chat_id=user["user_id"], text=text, parse_mode=ParseMode.MARKDOWN)
         except Exception as e:
             logger.error(f"Daily report {user['user_id']}: {e}")
