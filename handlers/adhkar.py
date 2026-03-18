@@ -206,6 +206,8 @@ async def handle_adhkar_callback(update: Update, context: ContextTypes.DEFAULT_T
 
     # ── Audio (per-item) ───────────────────────────────────
     if action == "audio":
+        if len(parts) < 4:
+            return
         index = int(parts[3])
         dhikr = adhkar_list[index]
         audio_url = dhikr.get("audio_url")
@@ -232,6 +234,8 @@ async def handle_adhkar_callback(update: Update, context: ContextTypes.DEFAULT_T
 
     # ── Next / Done ────────────────────────────────────────
     elif action == "next":
+        if len(parts) < 4:
+            return
         current_index = int(parts[3])
         next_index    = current_index + 1
 
@@ -270,6 +274,8 @@ async def handle_adhkar_callback(update: Update, context: ContextTypes.DEFAULT_T
 
     # ── Skip ───────────────────────────────────────────────
     elif action == "skip":
+        if len(parts) < 4:
+            return
         current_index = int(parts[3])
         next_index    = current_index + 1
         if next_index >= total:

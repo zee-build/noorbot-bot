@@ -82,7 +82,10 @@ async def _handle_callback_inner(query, data, user_id, chat_id, context):
 
     # ── Prayer checkin ────────────────────────────────────
     if data.startswith("pray:"):
-        _, prayer_key, mode = data.split(":")
+        parts = data.split(":")
+        if len(parts) != 3:
+            return
+        _, prayer_key, mode = parts
         label = PRAYER_LABELS.get(prayer_key, prayer_key.capitalize())
         pts   = POINTS.get(prayer_key, 3)
         jamaah = 1 if mode == "jamaah" else 0
@@ -136,6 +139,7 @@ async def _handle_callback_inner(query, data, user_id, chat_id, context):
         ramadan = await is_ramadan(
             db_user.get("latitude", 25.2048) if db_user else 25.2048,
             db_user.get("longitude", 55.2708) if db_user else 55.2708,
+            country=db_user.get("country", "") if db_user else "",
         )
         kb = after_prayer_kb(prayer_key, logged_prayers, ramadan)
         await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=kb)
@@ -145,7 +149,10 @@ async def _handle_callback_inner(query, data, user_id, chat_id, context):
 
     # ── Deed checkin ──────────────────────────────────────
     elif data.startswith("deed:"):
-        _, deed_key, pts_str = data.split(":")
+        parts = data.split(":")
+        if len(parts) != 3:
+            return
+        _, deed_key, pts_str = parts
         pts = int(pts_str)
         goals = await get_user_goals(user_id)
         goal  = next((g for g in goals if g["deed_key"] == deed_key), None)
