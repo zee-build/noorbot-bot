@@ -1,7 +1,7 @@
 import aiohttp, logging
 from datetime import date, datetime
 from typing import Optional
-from config import PRAYER_METHOD, TIMEZONE
+from config import PRAYER_METHOD, TIMEZONE, get_prayer_method
 import pytz
 
 logger = logging.getLogger(__name__)
@@ -13,12 +13,13 @@ PRAYER_EMOJIS = {"fajr":"🌙","dhuhr":"☀️","asr":"🌤","maghrib":"🌅","i
 _ramadan_cache: dict = {}   # {date_str: bool}
 
 
-async def get_prayer_times(lat, lng, for_date: date = None) -> Optional[dict]:
+async def get_prayer_times(lat, lng, for_date: date = None, country: str = "") -> Optional[dict]:
     if not for_date:
         for_date = date.today()
+    method = get_prayer_method(country)
     url = (f"https://api.aladhan.com/v1/timings/"
-           f"{for_date.day}-{for_date.month}-{for_date.year}"
-           f"?latitude={lat}&longitude={lng}&method={PRAYER_METHOD}")
+           f"{for_date.day:02d}-{for_date.month:02d}-{for_date.year}"
+           f"?latitude={lat}&longitude={lng}&method={method}")
     try:
         async with aiohttp.ClientSession() as s:
             async with s.get(url, timeout=aiohttp.ClientTimeout(total=10)) as r:
@@ -38,13 +39,13 @@ async def get_prayer_times(lat, lng, for_date: date = None) -> Optional[dict]:
         return None
 
 
-async def is_ramadan(lat=25.2048, lng=55.2708) -> bool:
+async def is_ramadan(lat=25.2048, lng=55.2708, country: str = "") -> bool:
     """Returns True if today is in Ramadan. Uses cached result if available."""
     today = date.today().isoformat()
     if today in _ramadan_cache:
         return _ramadan_cache[today]
     # Trigger a prayer times fetch to populate cache
-    await get_prayer_times(lat, lng)
+    await get_prayer_times(lat, lng, country=country)
     return _ramadan_cache.get(today, False)
 
 

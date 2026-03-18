@@ -14,7 +14,7 @@ import pytz
 
 from handlers.commands import (
     start, menu, profile, goals, stats, report,
-    weekly, monthly, settings_cmd, help_command, leaderboard_cmd, about_cmd
+    weekly, monthly, settings_cmd, help_command, leaderboard_cmd, about_cmd, feedback_cmd, cancel_cmd
 )
 from handlers.checkin import handle_callback, handle_text, handle_location
 from handlers.card import card_cmd
@@ -107,6 +107,12 @@ async def post_init(application: Application):
     scheduler.add_job(
         lambda: _run(ramadan_iftar, application),
         CronTrigger(hour=18, minute=10, timezone=tz), id="ramadan_iftar",
+        misfire_grace_time=_grace, coalesce=True,
+    )
+    # Evening prayer check-in — 9 PM
+    scheduler.add_job(
+        lambda: _run(daily_prayer_checkin, application),
+        CronTrigger(hour=21, minute=0, timezone=tz), id="daily_prayer_checkin",
         misfire_grace_time=_grace, coalesce=True,
     )
     # Period mode expiration check — 12:01 AM daily
@@ -209,6 +215,10 @@ async def daily_prayer_times(app):
     from handlers.reminders import send_daily_prayer_times
     await send_daily_prayer_times(app.bot)
 
+async def daily_prayer_checkin(app):
+    from handlers.reminders import send_daily_prayer_checkin
+    await send_daily_prayer_checkin(app.bot)
+
 async def check_period_expirations(app):
     from utils.database import get_users_period_ending_today, deactivate_period_mode
     from telegram.constants import ParseMode
@@ -252,6 +262,8 @@ def main():
     app.add_handler(CommandHandler("about",       about_cmd))
     app.add_handler(CommandHandler("leaderboard", leaderboard_cmd))
     app.add_handler(CommandHandler("card",        card_cmd))
+    app.add_handler(CommandHandler("feedback",    feedback_cmd))
+    app.add_handler(CommandHandler("cancel",      cancel_cmd))
 
     # Admin commands
     app.add_handler(CommandHandler("admin",       admin_cmd))

@@ -109,7 +109,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if is_new:
         # First-time welcome
-        times    = await get_prayer_times(db_user["latitude"], db_user["longitude"])
+        times    = await get_prayer_times(db_user["latitude"], db_user["longitude"], country=db_user.get("country", ""))
         schedule = "\n\n" + format_prayer_schedule(times, db_user["city"]) if times else ""
         text = (
             f"☽ *As-Salamu Alaikum, {user.first_name}!*\n\n"
@@ -255,12 +255,29 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/settings — City, reminders, groups\n"
         "/leaderboard — Top users this week\n"
         "/card — Shareable progress card 🌙\n"
+        "/feedback — Send feedback to the developer\n"
         "/about — About NoorBot\n"
         "/help — This message\n\n"
         "Prayer reminders fire 15 min before each salah. ☽\n"
         "_Share your location to auto-detect city & prayer times._"
     )
     await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
+
+
+async def feedback_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    from handlers.checkin import PENDING
+    PENDING[update.effective_user.id] = "awaiting_feedback"
+    await update.message.reply_text(
+        "💬 *Send Feedback*\n\n"
+        "Type your message below — it'll go straight to the developer.",
+        parse_mode=ParseMode.MARKDOWN,
+    )
+
+
+async def cancel_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    from handlers.checkin import PENDING
+    PENDING.pop(update.effective_user.id, None)
+    await update.message.reply_text("Cancelled.", reply_markup=main_menu_kb())
 
 
 ABOUT_TEXT = (

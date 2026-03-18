@@ -8,8 +8,8 @@ from telegram import Bot
 from telegram.constants import ParseMode
 
 from utils.database import (
-    get_all_active_users, mark_reminder_sent, mark_missed_followup_sent,
-    get_today_logs, get_user_goals, is_period_mode,
+    get_all_active_users, mark_reminder_sent,
+    get_today_logs, is_period_mode,
     get_uninformed_female_users, mark_period_notified,
     mark_broadcast_sent,
 )
@@ -17,19 +17,11 @@ from utils.prayer_times import (
     get_prayer_times, minutes_until_prayer, minutes_since_prayer,
     PRAYER_KEYS, PRAYER_EMOJIS, PRAYER_NAMES, to_12h
 )
-from utils.keyboards import prayer_checkin_kb, missed_followup_kb
+from utils.keyboards import prayer_checkin_kb
 from config import REMINDER_MINUTES, MORNING_CONTENT, WEEKLY_CHALLENGES
 import pytz
 
 logger = logging.getLogger(__name__)
-
-PRAYER_HADITHS = {
-    "fajr":    "The Prophet ﷺ said: 'Whoever prays Fajr is under the protection of Allah.' — Muslim",
-    "dhuhr":   "The Prophet ﷺ said: 'The gates of heaven open at midday.' — Tirmidhi",
-    "asr":     "Allah says: 'Guard the prayers, and the middle prayer.' — Quran 2:238",
-    "maghrib": "The Prophet ﷺ said: 'Do not delay three things: prayer when its time comes...' — Tirmidhi",
-    "isha":    "The Prophet ﷺ said: 'If people knew the reward for Isha in congregation, they would come crawling.' — Bukhari",
-}
 
 
 async def _notify_period_mode_feature(bot: Bot):
@@ -78,7 +70,7 @@ async def check_and_send_reminders(bot: Bot):
             if await is_period_mode(user["user_id"]):
                 continue
 
-            times = await get_prayer_times(user["latitude"], user["longitude"])
+            times = await get_prayer_times(user["latitude"], user["longitude"], country=user.get("country", ""))
             if not times:
                 continue
             tz = user.get("timezone", "Asia/Dubai")
@@ -92,25 +84,8 @@ async def check_and_send_reminders(bot: Bot):
                     if sent:
                         await _send_reminder(bot, user["user_id"], key, times[key], user["city"])
 
-                # ── Missed follow-up (30–90 min after prayer, not yet logged) ──
-                mins_since = minutes_since_prayer(times[key], tz)
-                if 30 <= mins_since <= 90:
-                    logs = await get_today_logs(user["user_id"])
-                    logged = {l["deed_key"] for l in logs}
-                    if key not in logged:
-                        sent = await mark_missed_followup_sent(user["user_id"], key, today)
-                        if sent:
-                            await _send_missed_followup(bot, user["user_id"], key)
-
-                # ── Dhikr after salah — 10–20 minutes after prayer ──
-                if 9 <= mins_since <= 20:
-                    sent = await mark_reminder_sent(user["user_id"], f"dhikr_salah_{key}", today)
-                    if sent:
-                        from handlers.adhkar import send_after_salah_prompt
-                        await send_after_salah_prompt(bot, user["user_id"], PRAYER_NAMES[key])
-
             # ── Ramadan Tarawih — 20 minutes after Isha ──
-            ramadan = await is_ramadan(user.get("latitude", 25.2048), user.get("longitude", 55.2708))
+            ramadan = await is_ramadan(user.get("latitude", 25.2048), user.get("longitude", 55.2708), country=user.get("country", ""))
             if ramadan and "isha" in times:
                 mins_since_isha = minutes_since_prayer(times["isha"], tz)
                 if 19 <= mins_since_isha <= 21:
@@ -118,12 +93,7 @@ async def check_and_send_reminders(bot: Bot):
                     if sent:
                         await bot.send_message(
                             chat_id=user["user_id"],
-                            text=(
-                                "🌙 *Time for Tarawih!*\n\n"
-                                "The Prophet ﷺ said: 'Whoever prays Tarawih with full faith and "
-                                "hoping for Allah's reward, his past sins will be forgiven.' — Bukhari\n\n"
-                                "Head to the masjid or pray at home. May Allah accept! 🤲"
-                            ),
+                            text="🌙 *Time for Tarawih!* May Allah accept your salah. 🤲",
                             parse_mode="Markdown"
                         )
 
@@ -132,15 +102,11 @@ async def check_and_send_reminders(bot: Bot):
 
 
 async def _send_reminder(bot: Bot, chat_id: int, key: str, prayer_time: str, city: str):
-    emoji   = PRAYER_EMOJIS[key]
-    name    = PRAYER_NAMES[key]
-    hadith  = PRAYER_HADITHS.get(key, "")
-
+    emoji = PRAYER_EMOJIS[key]
+    name  = PRAYER_NAMES[key]
     text = (
-        f"{emoji} *{name} in {REMINDER_MINUTES} minutes*\n\n"
-        f"🕐 *{to_12h(prayer_time)}* in {city}\n\n"
-        f"_{hadith}_\n\n"
-        f"🕌 Head to the masjid or prepare for salah now."
+        f"{emoji} *{name} — {REMINDER_MINUTES} min*\n"
+        f"🕐 {to_12h(prayer_time)} · {city}"
     )
     await bot.send_message(
         chat_id=chat_id, text=text,
@@ -148,20 +114,6 @@ async def _send_reminder(bot: Bot, chat_id: int, key: str, prayer_time: str, cit
         reply_markup=prayer_checkin_kb(key)
     )
 
-
-async def _send_missed_followup(bot: Bot, chat_id: int, key: str):
-    name  = PRAYER_NAMES[key]
-    emoji = PRAYER_EMOJIS[key]
-    text = (
-        f"{emoji} *Did you pray {name}?*\n\n"
-        "It looks like it may have slipped by. "
-        "You can still pray it as Qada — Allah is Most Merciful. 🤲"
-    )
-    await bot.send_message(
-        chat_id=chat_id, text=text,
-        parse_mode=ParseMode.MARKDOWN,
-        reply_markup=missed_followup_kb(key)
-    )
 
 
 async def send_morning_content(bot: Bot):
@@ -179,14 +131,14 @@ async def send_morning_content(bot: Bot):
         if not user.get("reminders_on", 1):
             continue
         try:
-            ramadan = await is_ramadan(user.get("latitude", 25.2048), user.get("longitude", 55.2708))
-            ramadan_txt = "\n\n🌙 *Ramadan Mubarak!* May Allah accept your fast today." if ramadan else ""
+            ramadan = await is_ramadan(user.get("latitude", 25.2048), user.get("longitude", 55.2708), country=user.get("country", ""))
+            ramadan_txt = " · 🌙 Ramadan Mubarak!" if ramadan else ""
             await bot.send_message(
                 chat_id=user["user_id"],
                 text=(
                     f"🌅 *{today.strftime('%A, %d %B')}*{ramadan_txt}\n\n"
-                    f"*Hadith of the Day:*\n_{content['hadith']}_\n"
-                    f"📚 _{content['source']}_"
+                    f"_{content['hadith']}_\n"
+                    f"📚 {content['source']}"
                 ),
                 parse_mode=ParseMode.MARKDOWN
             )
@@ -238,10 +190,10 @@ async def send_ramadan_suhoor(bot: Bot):
         if not user.get("reminders_on", 1):
             continue
         try:
-            ramadan = await is_ramadan(user.get("latitude", 25.2048), user.get("longitude", 55.2708))
+            ramadan = await is_ramadan(user.get("latitude", 25.2048), user.get("longitude", 55.2708), country=user.get("country", ""))
             if not ramadan:
                 continue
-            times = await get_prayer_times(user["latitude"], user["longitude"])
+            times = await get_prayer_times(user["latitude"], user["longitude"], country=user.get("country", ""))
             fajr_time = times.get("fajr", "05:00") if times else "05:00"
             await bot.send_message(
                 chat_id=user["user_id"],
@@ -268,10 +220,10 @@ async def send_ramadan_iftar(bot: Bot):
         if not user.get("reminders_on", 1):
             continue
         try:
-            ramadan = await is_ramadan(user.get("latitude", 25.2048), user.get("longitude", 55.2708))
+            ramadan = await is_ramadan(user.get("latitude", 25.2048), user.get("longitude", 55.2708), country=user.get("country", ""))
             if not ramadan:
                 continue
-            times = await get_prayer_times(user["latitude"], user["longitude"])
+            times = await get_prayer_times(user["latitude"], user["longitude"], country=user.get("country", ""))
             maghrib_time = times.get("maghrib", "18:30") if times else "18:30"
             await bot.send_message(
                 chat_id=user["user_id"],
@@ -298,14 +250,9 @@ async def send_friday_morning(bot: Bot):
     users = await get_all_active_users()
     text = (
         "🌿 *Jumu'ah Mubarak!*\n\n"
-        "*Start your Friday well:*\n"
-        "• Perform ghusl and wear your best, clean clothes\n"
-        "• Apply perfume (for men)\n"
-        "• Remember — Friday is a blessed day 🤍\n\n"
-        "*During the day:*\n"
-        "• Read Surah Al-Kahf\n"
+        "• Perform ghusl · Read Surah Al-Kahf\n"
         "• Increase salawat upon the Prophet ﷺ\n"
-        "• Make duʿa frequently and remember Allah throughout\n\n"
+        "• Make duʿa — today is a blessed day 🤍\n\n"
         "_'The best day on which the sun has risen is Friday.'_ — Muslim"
     )
     for user in users:
@@ -326,10 +273,7 @@ async def send_friday_jumua(bot: Bot):
         return
     users = await get_all_active_users()
     text = (
-        "🕌 *Jumu'ah is soon!*\n\n"
-        "• Go to the masjid *early* — the earlier you arrive, the greater the reward\n"
-        "• Pray Tahiyyat al-Masjid when you enter\n"
-        "• Listen attentively to the khutbah\n\n"
+        "🕌 *Jumu'ah is soon — go early!*\n\n"
         "_'Whoever goes early to Jumu'ah is like one who offered a camel for Allah's sake.'_ — Bukhari\n\n"
         "May Allah accept your Jumu'ah. 🤲"
     )
@@ -351,16 +295,10 @@ async def send_friday_asr_dua(bot: Bot):
         return
     users = await get_all_active_users()
     text = (
-        "🤲 *Sa'at al-Istijabah — The Hour of Answered Duʿa*\n\n"
-        "After Asr until Maghrib is a special time on Friday when duʿa is accepted.\n\n"
-        "Increase your supplications now:\n"
-        "• Ask for forgiveness\n"
-        "• Ask for your needs in this life and the next\n"
-        "• Send salawat upon the Prophet ﷺ\n"
-        "• Do not leave this hour without making duʿa\n\n"
-        "_'On Friday there is a time when, if a Muslim stands and prays and asks Allah for something good, "
-        "He will give it to him.'_ — Bukhari\n\n"
-        "May Allah fill our Friday with mercy and accept our duʿa. 🌿"
+        "🤲 *Sa'at al-Istijabah*\n\n"
+        "After Asr until Maghrib — the hour of answered duʿa. Don't miss it.\n\n"
+        "_'On Friday there is a time when, if a Muslim asks Allah for something good, He will give it.'_ — Bukhari\n\n"
+        "May Allah accept your duʿa. 🌿"
     )
     for user in users:
         if not user.get("reminders_on", 1):
@@ -408,14 +346,9 @@ async def send_friday_morning_single(bot: Bot, chat_id: int):
         chat_id=chat_id,
         text=(
             "🌿 *Jumu'ah Mubarak!*\n\n"
-            "*Start your Friday well:*\n"
-            "• Perform ghusl and wear your best, clean clothes\n"
-            "• Apply perfume (for men)\n"
-            "• Remember — Friday is a blessed day 🤍\n\n"
-            "*During the day:*\n"
-            "• Read Surah Al-Kahf\n"
+            "• Perform ghusl · Read Surah Al-Kahf\n"
             "• Increase salawat upon the Prophet ﷺ\n"
-            "• Make duʿa frequently and remember Allah throughout\n\n"
+            "• Make duʿa — today is a blessed day 🤍\n\n"
             "_'The best day on which the sun has risen is Friday.'_ — Muslim"
         ),
         parse_mode=ParseMode.MARKDOWN
@@ -425,10 +358,7 @@ async def send_friday_jumua_single(bot: Bot, chat_id: int):
     await bot.send_message(
         chat_id=chat_id,
         text=(
-            "🕌 *Jumu'ah is soon!*\n\n"
-            "• Go to the masjid *early* — the earlier you arrive, the greater the reward\n"
-            "• Pray Tahiyyat al-Masjid when you enter\n"
-            "• Listen attentively to the khutbah\n\n"
+            "🕌 *Jumu'ah is soon — go early!*\n\n"
             "_'Whoever goes early to Jumu'ah is like one who offered a camel for Allah's sake.'_ — Bukhari\n\n"
             "May Allah accept your Jumu'ah. 🤲"
         ),
@@ -439,16 +369,10 @@ async def send_friday_asr_dua_single(bot: Bot, chat_id: int):
     await bot.send_message(
         chat_id=chat_id,
         text=(
-            "🤲 *Sa'at al-Istijabah — The Hour of Answered Duʿa*\n\n"
-            "After Asr until Maghrib is a special time on Friday when duʿa is accepted.\n\n"
-            "Increase your supplications now:\n"
-            "• Ask for forgiveness\n"
-            "• Ask for your needs in this life and the next\n"
-            "• Send salawat upon the Prophet ﷺ\n"
-            "• Do not leave this hour without making duʿa\n\n"
-            "_'On Friday there is a time when, if a Muslim stands and prays and asks Allah for something good, "
-            "He will give it to him.'_ — Bukhari\n\n"
-            "May Allah fill our Friday with mercy and accept our duʿa. 🌿"
+            "🤲 *Sa'at al-Istijabah*\n\n"
+            "After Asr until Maghrib — the hour of answered duʿa. Don't miss it.\n\n"
+            "_'On Friday there is a time when, if a Muslim asks Allah for something good, He will give it.'_ — Bukhari\n\n"
+            "May Allah accept your duʿa. 🌿"
         ),
         parse_mode=ParseMode.MARKDOWN
     )
@@ -493,7 +417,7 @@ async def send_daily_prayer_times(bot: Bot):
         if not user.get("reminders_on", 1):
             continue
         try:
-            times = await get_prayer_times(user["latitude"], user["longitude"])
+            times = await get_prayer_times(user["latitude"], user["longitude"], country=user.get("country", ""))
             if not times:
                 continue
             await bot.send_message(
@@ -503,3 +427,31 @@ async def send_daily_prayer_times(bot: Bot):
             )
         except Exception as e:
             logger.error(f"Daily prayer times error {user['user_id']}: {e}")
+
+
+async def send_daily_prayer_checkin(bot: Bot):
+    """9 PM consolidated check-in — one message showing all prayers for the day."""
+    from utils.keyboards import prayer_log_kb
+    today = date.today().isoformat()
+    if not await mark_broadcast_sent("daily_prayer_checkin", today):
+        return
+    users = await get_all_active_users()
+    for user in users:
+        if not user.get("reminders_on", 1):
+            continue
+        try:
+            if await is_period_mode(user["user_id"]):
+                continue
+            logs = await get_today_logs(user["user_id"])
+            logged = {l["deed_key"] for l in logs}
+            prayers_done = sum(1 for k in ["fajr", "dhuhr", "asr", "maghrib", "isha"] if k in logged)
+            if prayers_done == 5:
+                continue  # All prayers logged — no need to send
+            await bot.send_message(
+                chat_id=user["user_id"],
+                text=f"🌙 *End of day check-in — {prayers_done}/5 prayers logged*\n\nAny you haven't logged yet?",
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=prayer_log_kb(logged),
+            )
+        except Exception as e:
+            logger.error(f"Daily checkin error {user['user_id']}: {e}")

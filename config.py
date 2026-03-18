@@ -8,8 +8,50 @@ load_dotenv()
 BOT_TOKEN        = os.getenv("BOT_TOKEN", "")
 DATABASE_URL     = os.getenv("DATABASE_URL", "noorbot.db")
 TIMEZONE         = "Asia/Dubai"
-PRAYER_METHOD    = 8
+PRAYER_METHOD    = 8   # fallback (Gulf Region)
 REMINDER_MINUTES = 15
+
+# AlAdhan calculation method per country
+# https://aladhan.com/calculation-methods
+_COUNTRY_METHOD = {
+    # Gulf
+    "United Arab Emirates": 8, "UAE": 8,
+    "Bahrain": 8, "Oman": 8, "Yemen": 8,
+    "Kuwait": 9,
+    "Qatar": 10,
+    # Saudi Arabia
+    "Saudi Arabia": 4,
+    # South Asia
+    "India": 1, "Pakistan": 1, "Bangladesh": 1, "Afghanistan": 1,
+    # Southeast Asia
+    "Singapore": 11, "Malaysia": 11, "Indonesia": 11, "Brunei": 11,
+    # Turkey
+    "Turkey": 13,
+    # Egypt
+    "Egypt": 5,
+    # Iran
+    "Iran": 7,
+    # France
+    "France": 12,
+    # Russia / Central Asia
+    "Russia": 14,
+    # North America
+    "United States": 2, "United States of America": 2, "USA": 2,
+    "Canada": 2,
+    # UK / Europe (MWL works well)
+    "United Kingdom": 3, "Germany": 3, "Netherlands": 3, "Belgium": 3,
+}
+
+
+def get_prayer_method(country: str) -> int:
+    """Return the best AlAdhan calculation method for a given country string."""
+    if not country:
+        return PRAYER_METHOD
+    # Normalise — country from Nominatim can be a full display name segment
+    for key, method in _COUNTRY_METHOD.items():
+        if key.lower() in country.lower():
+            return method
+    return PRAYER_METHOD  # default: Gulf Region
 WEBAPP_URL       = os.getenv("WEBAPP_URL", "")
 ADMIN_CHAT_ID    = int(os.getenv("ADMIN_CHAT_ID", "0"))
 ADMIN_PASSWORD   = os.getenv("ADMIN_PASSWORD", "")

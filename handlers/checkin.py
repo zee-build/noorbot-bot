@@ -455,7 +455,7 @@ async def _handle_callback_inner(query, data, user_id, chat_id, context):
             import random
             from datetime import date
             db_user = await get_user(user_id)
-            times = await get_prayer_times(db_user["latitude"], db_user["longitude"])
+            times = await get_prayer_times(db_user["latitude"], db_user["longitude"], country=db_user.get("country", ""))
             bot = context.bot
 
             # Prayer reminder (Fajr)
@@ -531,7 +531,7 @@ async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update_user_location(user_id, city, country, lat, lng)
 
     from utils.prayer_times import get_prayer_times, format_prayer_schedule
-    times = await get_prayer_times(lat, lng)
+    times = await get_prayer_times(lat, lng, country=country)
     schedule = format_prayer_schedule(times, city) if times else ""
 
     PENDING.pop(user_id, None)
@@ -567,7 +567,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
         await update_user_location(user_id, result["city"], result["country"], result["lat"], result["lng"])
-        times = await get_prayer_times(result["lat"], result["lng"])
+        times = await get_prayer_times(result["lat"], result["lng"], country=result["country"])
         schedule = format_prayer_schedule(times, result["city"]) if times else ""
         PENDING.pop(user_id, None)
         await update.message.reply_text(
@@ -632,6 +632,27 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 parse_mode=ParseMode.MARKDOWN,
                 reply_markup=main_menu_kb()
             )
+
+    elif pending == "awaiting_feedback":
+        from config import ADMIN_CHAT_ID
+        PENDING.pop(user_id, None)
+        user = update.effective_user
+        uname = f" (@{user.username})" if user.username else ""
+        if ADMIN_CHAT_ID:
+            try:
+                await context.bot.send_message(
+                    chat_id=ADMIN_CHAT_ID,
+                    text=f"💬 *Feedback from {user.first_name}{uname}* (id: `{user_id}`):\n\n{text}",
+                    parse_mode=ParseMode.MARKDOWN,
+                )
+            except Exception as e:
+                logger.error(f"Feedback forward failed: {e}")
+        await update.message.reply_text(
+            "✅ *Feedback sent!* JazakAllah khair — I read every message. 🙏",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=main_menu_kb(),
+        )
+
     else:
         # Unknown message — show menu
         await update.message.reply_text(
