@@ -18,7 +18,7 @@ from utils.prayer_times import (
     PRAYER_KEYS, PRAYER_EMOJIS, PRAYER_NAMES, to_12h
 )
 from utils.keyboards import prayer_checkin_kb
-from config import REMINDER_MINUTES, MORNING_CONTENT, WEEKLY_CHALLENGES
+from config import REMINDER_MINUTES, MORNING_CONTENT, WEEKLY_CHALLENGES, get_user_timezone
 import pytz
 
 logger = logging.getLogger(__name__)
@@ -73,7 +73,7 @@ async def check_and_send_reminders(bot: Bot):
             times = await get_prayer_times(user["latitude"], user["longitude"], country=user.get("country", ""))
             if not times:
                 continue
-            tz = user.get("timezone", "Asia/Dubai")
+            tz = get_user_timezone(user.get("country", ""))
 
             for key in PRAYER_KEYS:
                 mins_until = minutes_until_prayer(times[key], tz)

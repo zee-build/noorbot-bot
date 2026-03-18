@@ -47,11 +47,83 @@ def get_prayer_method(country: str) -> int:
     """Return the best AlAdhan calculation method for a given country string."""
     if not country:
         return PRAYER_METHOD
-    # Normalise — country from Nominatim can be a full display name segment
     for key, method in _COUNTRY_METHOD.items():
         if key.lower() in country.lower():
             return method
     return PRAYER_METHOD  # default: Gulf Region
+
+
+# ── Timezone per country ──────────────────────────────────
+_COUNTRY_TIMEZONE = {
+    # Gulf
+    "United Arab Emirates": "Asia/Dubai", "UAE": "Asia/Dubai",
+    "Oman": "Asia/Muscat", "Bahrain": "Asia/Bahrain",
+    "Kuwait": "Asia/Kuwait", "Qatar": "Asia/Qatar",
+    "Yemen": "Asia/Aden",
+    # Saudi
+    "Saudi Arabia": "Asia/Riyadh",
+    # South Asia
+    "India": "Asia/Kolkata",
+    "Pakistan": "Asia/Karachi",
+    "Bangladesh": "Asia/Dhaka",
+    "Afghanistan": "Asia/Kabul",
+    "Sri Lanka": "Asia/Colombo",
+    "Nepal": "Asia/Kathmandu",
+    # Southeast Asia
+    "Malaysia": "Asia/Kuala_Lumpur",
+    "Singapore": "Asia/Singapore",
+    "Indonesia": "Asia/Jakarta",
+    "Brunei": "Asia/Brunei",
+    # Middle East / Central Asia
+    "Iran": "Asia/Tehran",
+    "Iraq": "Asia/Baghdad",
+    "Jordan": "Asia/Amman",
+    "Lebanon": "Asia/Beirut",
+    "Syria": "Asia/Damascus",
+    "Palestine": "Asia/Gaza",
+    "Azerbaijan": "Asia/Baku",
+    "Kazakhstan": "Asia/Almaty",
+    "Uzbekistan": "Asia/Tashkent",
+    # Africa
+    "Egypt": "Africa/Cairo",
+    "Morocco": "Africa/Casablanca",
+    "Tunisia": "Africa/Tunis",
+    "Algeria": "Africa/Algiers",
+    "Libya": "Africa/Tripoli",
+    "Sudan": "Africa/Khartoum",
+    "Ethiopia": "Africa/Addis_Ababa",
+    "Somalia": "Africa/Mogadishu",
+    "Nigeria": "Africa/Lagos",
+    "Senegal": "Africa/Dakar",
+    # Europe
+    "Turkey": "Europe/Istanbul",
+    "United Kingdom": "Europe/London",
+    "Germany": "Europe/Berlin",
+    "France": "Europe/Paris",
+    "Netherlands": "Europe/Amsterdam",
+    "Belgium": "Europe/Brussels",
+    "Spain": "Europe/Madrid",
+    "Italy": "Europe/Rome",
+    "Sweden": "Europe/Stockholm",
+    "Norway": "Europe/Oslo",
+    "Denmark": "Europe/Copenhagen",
+    "Russia": "Europe/Moscow",
+    # Americas
+    "United States": "America/New_York",
+    "Canada": "America/Toronto",
+    # Oceania
+    "Australia": "Australia/Sydney",
+}
+
+
+def get_user_timezone(country: str) -> str:
+    """Return the pytz timezone name for a given country string."""
+    if not country:
+        return TIMEZONE
+    for key, tz in _COUNTRY_TIMEZONE.items():
+        if key.lower() in country.lower():
+            return tz
+    return TIMEZONE  # default: Dubai
 WEBAPP_URL       = os.getenv("WEBAPP_URL", "")
 ADMIN_CHAT_ID    = int(os.getenv("ADMIN_CHAT_ID", "0"))
 ADMIN_PASSWORD   = os.getenv("ADMIN_PASSWORD", "")
