@@ -374,22 +374,10 @@ async def send_eid_mubarak(bot: Bot):
             times = await get_prayer_times(user["latitude"], user["longitude"], country=user.get("country", ""))
             city = user.get("city", "")
 
-            takbeer = (
-                "_Allahu Akbar, Allahu Akbar, Allahu Akbar_\n"
-                "_Laa ilaaha ill-Allah_\n"
-                "_Allahu Akbar, Allahu Akbar_\n"
-                "_Wa Lillaahil-hamd_"
-            )
-
             text = (
                 "🌙✨ *Eid al-Fitr Mubarak!*\n\n"
                 "_Taqabbal Allahu minnaa wa minkum —_\n"
-                "_May Allah accept from us and from you._ 🤲\n\n"
-                "Say the Takbeer:\n"
-                f"{takbeer}\n\n"
-                "Alhamdulillah for completing Ramadan. May Allah accept every prayer, "
-                "fast, and good deed. Celebrate with gratitude — this is your day. 💚\n\n"
-                "*عيد مبارك* 🌙"
+                "_May Allah accept from us and from you._ 🤲"
             )
             await bot.send_message(
                 chat_id=user["user_id"],
