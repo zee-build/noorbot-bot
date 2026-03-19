@@ -374,11 +374,12 @@ async def send_eid_mubarak(bot: Bot):
             times = await get_prayer_times(user["latitude"], user["longitude"], country=user.get("country", ""))
             city = user.get("city", "")
 
+            city_txt = f" in {city}" if city else ""
             if times and times.get("sunrise"):
                 sunrise_txt = to_12h(times["sunrise"])
-                prayer_line = f"\n🕌 *Eid prayer* is shortly after sunrise ({sunrise_txt}) in {city}.\n"
+                prayer_line = f"\n🕌 *Eid prayer* is shortly after sunrise ({sunrise_txt}){city_txt}.\n"
             else:
-                prayer_line = f"\n🕌 *Eid prayer* is shortly after sunrise in {city}.\n"
+                prayer_line = f"\n🕌 *Eid prayer* is shortly after sunrise{city_txt}.\n"
 
             takbeer = (
                 "_Allahu Akbar, Allahu Akbar, Allahu Akbar_\n"
