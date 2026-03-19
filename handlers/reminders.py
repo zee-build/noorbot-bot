@@ -374,13 +374,6 @@ async def send_eid_mubarak(bot: Bot):
             times = await get_prayer_times(user["latitude"], user["longitude"], country=user.get("country", ""))
             city = user.get("city", "")
 
-            city_txt = f" in {city}" if city else ""
-            if times and times.get("sunrise"):
-                sunrise_txt = to_12h(times["sunrise"])
-                prayer_line = f"\n🕌 *Eid prayer* is shortly after sunrise ({sunrise_txt}){city_txt}.\n"
-            else:
-                prayer_line = f"\n🕌 *Eid prayer* is shortly after sunrise{city_txt}.\n"
-
             takbeer = (
                 "_Allahu Akbar, Allahu Akbar, Allahu Akbar_\n"
                 "_Laa ilaaha ill-Allah_\n"
@@ -392,7 +385,6 @@ async def send_eid_mubarak(bot: Bot):
                 "🌙✨ *Eid al-Fitr Mubarak!*\n\n"
                 "_Taqabbal Allahu minnaa wa minkum —_\n"
                 "_May Allah accept from us and from you._ 🤲\n\n"
-                f"{prayer_line}\n"
                 "Say the Takbeer:\n"
                 f"{takbeer}\n\n"
                 "Alhamdulillah for completing Ramadan. May Allah accept every prayer, "
