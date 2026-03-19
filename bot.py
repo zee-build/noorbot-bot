@@ -21,7 +21,7 @@ from handlers.card import card_cmd
 from handlers.admin import (
     admin_cmd, stats_admin, top10_cmd, broadcast_cmd,
     user_info_cmd, pause_user_cmd, resume_user_cmd,
-    inactive_users_cmd, active_users_cmd
+    inactive_users_cmd, active_users_cmd, eid_blast_cmd
 )
 from utils.database import init_db
 from config import BOT_TOKEN, TIMEZONE
@@ -95,18 +95,6 @@ async def post_init(application: Application):
     scheduler.add_job(
         lambda: _run(weekly_challenge, application),
         CronTrigger(day_of_week="mon", hour=7, minute=0, timezone=tz), id="weekly_challenge",
-        misfire_grace_time=_grace, coalesce=True,
-    )
-    # Ramadan suhoor reminder — 3:30 AM
-    scheduler.add_job(
-        lambda: _run(ramadan_suhoor, application),
-        CronTrigger(hour=3, minute=30, timezone=tz), id="ramadan_suhoor",
-        misfire_grace_time=_grace, coalesce=True,
-    )
-    # Ramadan iftar reminder — 6:10 PM (before typical Maghrib)
-    scheduler.add_job(
-        lambda: _run(ramadan_iftar, application),
-        CronTrigger(hour=18, minute=10, timezone=tz), id="ramadan_iftar",
         misfire_grace_time=_grace, coalesce=True,
     )
     # Evening prayer check-in — 9 PM
@@ -191,13 +179,9 @@ async def sleep_adhkar(app):
     from handlers.reminders import send_sleep_adhkar_reminder
     await send_sleep_adhkar_reminder(app.bot)
 
-async def ramadan_suhoor(app):
-    from handlers.reminders import send_ramadan_suhoor
-    await send_ramadan_suhoor(app.bot)
-
-async def ramadan_iftar(app):
-    from handlers.reminders import send_ramadan_iftar
-    await send_ramadan_iftar(app.bot)
+async def eid_blast(app):
+    from handlers.reminders import send_eid_mubarak
+    await send_eid_mubarak(app.bot)
 
 async def friday_morning(app):
     from handlers.reminders import send_friday_morning
@@ -275,6 +259,7 @@ def main():
     app.add_handler(CommandHandler("resume_user", resume_user_cmd))
     app.add_handler(CommandHandler("inactive",    inactive_users_cmd))
     app.add_handler(CommandHandler("users",       active_users_cmd))
+    app.add_handler(CommandHandler("eid",         eid_blast_cmd))
 
     # Adhkar command + callbacks
     from handlers.adhkar import handle_adhkar_callback, adhkar_menu_cmd

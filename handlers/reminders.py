@@ -84,19 +84,6 @@ async def check_and_send_reminders(bot: Bot):
                     if sent:
                         await _send_reminder(bot, user["user_id"], key, times[key], user["city"])
 
-            # ── Ramadan Tarawih — 20 minutes after Isha ──
-            ramadan = await is_ramadan(user.get("latitude", 25.2048), user.get("longitude", 55.2708), country=user.get("country", ""))
-            if ramadan and "isha" in times:
-                mins_since_isha = minutes_since_prayer(times["isha"], tz)
-                if 19 <= mins_since_isha <= 21:
-                    sent = await mark_reminder_sent(user["user_id"], "tarawih", today)
-                    if sent:
-                        await bot.send_message(
-                            chat_id=user["user_id"],
-                            text="🌙 *Time for Tarawih!* May Allah accept your salah. 🤲",
-                            parse_mode="Markdown"
-                        )
-
         except Exception as e:
             logger.error(f"Reminder error user {user['user_id']}: {e}")
 
@@ -131,12 +118,10 @@ async def send_morning_content(bot: Bot):
         if not user.get("reminders_on", 1):
             continue
         try:
-            ramadan = await is_ramadan(user.get("latitude", 25.2048), user.get("longitude", 55.2708), country=user.get("country", ""))
-            ramadan_txt = " · 🌙 Ramadan Mubarak!" if ramadan else ""
             await bot.send_message(
                 chat_id=user["user_id"],
                 text=(
-                    f"🌅 *{today.strftime('%A, %d %B')}*{ramadan_txt}\n\n"
+                    f"🌅 *{today.strftime('%A, %d %B')}*\n\n"
                     f"_{content['hadith']}_\n"
                     f"📚 {content['source']}"
                 ),
@@ -376,6 +361,50 @@ async def send_friday_asr_dua_single(bot: Bot, chat_id: int):
         ),
         parse_mode=ParseMode.MARKDOWN
     )
+
+
+async def send_eid_mubarak(bot: Bot):
+    """One-time Eid al-Fitr broadcast — location-aware sunrise time."""
+    today = date.today().isoformat()
+    if not await mark_broadcast_sent("eid_alfitr_2026", today):
+        return
+    users = await get_all_active_users()
+    for user in users:
+        try:
+            times = await get_prayer_times(user["latitude"], user["longitude"], country=user.get("country", ""))
+            city = user.get("city", "")
+
+            if times and times.get("sunrise"):
+                sunrise_txt = to_12h(times["sunrise"])
+                prayer_line = f"\n🕌 *Eid prayer* is shortly after sunrise ({sunrise_txt}) in {city}.\n"
+            else:
+                prayer_line = f"\n🕌 *Eid prayer* is shortly after sunrise in {city}.\n"
+
+            takbeer = (
+                "_Allahu Akbar, Allahu Akbar, Allahu Akbar_\n"
+                "_Laa ilaaha ill-Allah_\n"
+                "_Allahu Akbar, Allahu Akbar_\n"
+                "_Wa Lillaahil-hamd_"
+            )
+
+            text = (
+                "🌙✨ *Eid al-Fitr Mubarak!*\n\n"
+                "_Taqabbal Allahu minnaa wa minkum —_\n"
+                "_May Allah accept from us and from you._ 🤲\n\n"
+                f"{prayer_line}\n"
+                "Say the Takbeer:\n"
+                f"{takbeer}\n\n"
+                "Alhamdulillah for completing Ramadan. May Allah accept every prayer, "
+                "fast, and good deed. Celebrate with gratitude — this is your day. 💚\n\n"
+                "*عيد مبارك* 🌙"
+            )
+            await bot.send_message(
+                chat_id=user["user_id"],
+                text=text,
+                parse_mode=ParseMode.MARKDOWN,
+            )
+        except Exception as e:
+            logger.error(f"Eid blast error {user['user_id']}: {e}")
 
 
 async def send_weekly_challenge(bot: Bot):

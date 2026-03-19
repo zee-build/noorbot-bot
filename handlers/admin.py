@@ -164,6 +164,16 @@ async def broadcast_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def eid_blast_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Fire the Eid al-Fitr broadcast now. Usage: /eid"""
+    if not await _check_admin(update):
+        return
+    await update.message.reply_text("🌙 Sending Eid Mubarak to all users...")
+    from handlers.reminders import send_eid_mubarak
+    await send_eid_mubarak(context.bot)
+    await update.message.reply_text("✅ Eid blast sent!")
+
+
 async def user_info_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Get info about a specific user. Usage: /user <user_id>"""
     if not await _check_admin(update):
